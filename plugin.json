@@ -1,0 +1,14 @@
+{
+	"type": "ecmascript",
+	"id": "anidub",
+	"file": "anidub.js",
+	"showtimeVersion": "4.8",
+	"version": "1.1.0",
+	"author": "Buksa",
+	"title": "AniDub",
+	"icon": "logo.png",
+	"synopsis": "Anidub Аниме Онлайн здесь вы можете смотреть аниме бесплатно в озвучке любимых даберов.",
+	"description": "<p>Anidub - online anime video for Showtime</p>",
+	"homepage": "https://github.com/Buksa/movian-plugin-anidub",
+	"category": "video"
+}
