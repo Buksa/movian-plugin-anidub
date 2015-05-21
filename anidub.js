@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  anidub  - Movian Plugin
  *
  *  Copyright (C) 2014-2015 Buksa
