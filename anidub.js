@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  anidub  - Movian Plugin
  *
  *  Copyright (C) 2014-2015 Buksa
@@ -16,9 +16,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 1.1.0
+//ver 1.1.1
 var http = require('showtime/http');
-//var html = require('showtime/html');
+var html = require('showtime/html');
 
 (function(plugin) {
 	var plugin_info = plugin.getDescriptor();
