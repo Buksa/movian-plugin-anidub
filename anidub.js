@@ -16,9 +16,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 1.1.2
+//ver 1.1.3
 var http = require('showtime/http');
-var html = require('showtime/html');
+//var html = require('showtime/html');
 
 (function(plugin) {
 	var plugin_info = plugin.getDescriptor();
@@ -104,13 +104,13 @@ var html = require('showtime/html');
 		page.metadata.backgroundAlpha = 0.5;
 		page.loading = true;
 		var list = '';
-		
+
 		start_block(page, '/anime_tv/anime_ongoing/', 'Аниме Ongoing')
 		start_block(page, '/anime_tv/', 'Аниме TV')
 		start_block(page, '/anime_movie/', 'Аниме Фильмы')
 		start_block(page, '/anime_ova/', 'Аниме OVA')
 		start_block(page, '/dorama/', 'Дорамы Онлайн')
-		
+
 		page.appendItem(PREFIX + ":select:жанрам", "directory", {
 			title: new showtime.RichText('<font size="5" color="ffffff">' + "Аниме по жанрам" + '</font>'),
 			icon: plugin.path + "logo.png"
@@ -268,7 +268,7 @@ var html = require('showtime/html');
 				'User-Agent': USER_AGENT
 			}
 		}).toString()
-		var dom = html.parse(http.request(url))
+		//var dom = html.parse(http.request(url))
 		//
 		//var player = dom.root.getElementById('players');
 
@@ -354,7 +354,7 @@ var html = require('showtime/html');
 			for (i = 0; i < m.length; i++) {
 				p(m[i])
 				page.appendItem(PREFIX + ':play:' + encodeURIComponent(m[i][1]) + ':' + encodeURIComponent(m[i][2]), 'video', {
-					title: '[hls]' + m[i][2],
+					title: m[i][2],
 					icon: imageURL
 				});
 
@@ -467,16 +467,16 @@ var html = require('showtime/html');
 		page.metadata.background = 'http://online.anidub.com/templates/Anidub_online/img/bg_1.jpg';
 		try {
 			html = http.request(BASE_URL);
-				re = /<a title="(.+?)" href="(.+?)"/g;
-				re2 = new RegExp('sublink">Аниме по '+url+'<[\\S\\s]*?</ul>');
-				m = re.execAll(re2.exec(html));
-				for (i = 0; i < m.length; i++) {
-					page.appendItem(PREFIX + ":browse:" + (m[i][2] + ':' + (m[i][1])), "video", {
-						title: new showtime.RichText(m[i][1]),
-						description: new showtime.RichText(m[i][2]),
-						icon: plugin.path + "logo.png"
-					});
-				}
+			re = /<a title="(.+?)" href="(.+?)"/g;
+			re2 = new RegExp('sublink">Аниме по ' + url + '<[\\S\\s]*?</ul>');
+			m = re.execAll(re2.exec(html));
+			for (i = 0; i < m.length; i++) {
+				page.appendItem(PREFIX + ":browse:" + (m[i][2] + ':' + (m[i][1])), "video", {
+					title: new showtime.RichText(m[i][1]),
+					description: new showtime.RichText(m[i][2]),
+					icon: plugin.path + "logo.png"
+				});
+			}
 
 		} catch (ex) {
 			page.error("Failed to process categories page (get_cat)");
@@ -626,7 +626,7 @@ var html = require('showtime/html');
 				}
 			}).toString();
 			videoparams.sources = [{
-					url: 'hls:' + /file: '([^']+)/.exec(v)[1]
+					url: /file: '([^']+)/.exec(v)[1]
 				}
 			]
 			video = "videoparams:" + JSON.stringify(videoparams)
