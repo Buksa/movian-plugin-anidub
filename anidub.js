@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 1.1.1
+//ver 1.1.2
 var http = require('showtime/http');
 var html = require('showtime/html');
 
@@ -78,6 +78,25 @@ var html = require('showtime/html');
 
 	//First level start page
 
+	function start_block(page, href, title) {
+		page.appendItem("", "separator", {
+			title: new showtime.RichText(title)
+		});
+		p(listScraper(BASE_URL + href));
+		var list = listScraper(BASE_URL + href, false);
+		for (var i = 0; i < list.length; i++) {
+			page.appendItem(PREFIX + ":page:" + escape(list[i].title) + ":" + escape(list[i].url) + ":" + escape(list[i].image), "video", {
+				title: new showtime.RichText(list[i].title),
+				description: list[i].description ? new showtime.RichText(list[i].description) : list[i].title,
+				icon: new showtime.RichText(list[i].image)
+			});
+		}
+		page.appendItem(PREFIX + ":browse:" + href + ":" + title, "directory", {
+			title: ('Дальше больше') + ' ►',
+			icon: logo
+		});
+	}
+
 	function startPage(page) {
 		if (!service.tosaccepted)
 			if (popup.message(tos, true, true)) service.tosaccepted = 1;
@@ -85,103 +104,13 @@ var html = require('showtime/html');
 		page.metadata.backgroundAlpha = 0.5;
 		page.loading = true;
 		var list = '';
-		//Аниме Ongoing
-		//http://online.anidub.com/anime_ongoing/
-		{
-			page.appendItem("", "separator", {
-				title: new showtime.RichText('Аниме Ongoing')
-			});
-			p(listScraper(BASE_URL + '/anime_tv/anime_ongoing/'));
-			var list = listScraper(BASE_URL + '/anime_tv/anime_ongoing/', false);
-			for (var i = 0; i < list.length; i++) {
-				page.appendItem(PREFIX + ":page:" + escape(list[i].title) + ":" + escape(list[i].url) + ":" + escape(list[i].image), "video", {
-					title: new showtime.RichText(list[i].title),
-					description: list[i].description ? new showtime.RichText(list[i].description) : list[i].title,
-					icon: new showtime.RichText(list[i].image)
-				});
-			}
-			page.appendItem(PREFIX + ":browse:" + "/anime_tv/anime_ongoing/" + ":" + "Аниме Ongoing", "directory", {
-				title: ('Дальше больше') + ' ►',
-				icon: logo
-			});
-		}
-		//Аниме TV
-		//http://online.anidub.com/anime_tv/
-		{
-			page.appendItem("", "separator", {
-				title: new showtime.RichText('Аниме TV')
-			});
-			p(listScraper(BASE_URL + '/anime_tv/'))
-			var list = listScraper(BASE_URL + '/anime_tv/', false);
-			for (var i = 0; i < list.length; i++) {
-				page.appendItem(PREFIX + ":page:" + escape(list[i].title) + ":" + escape(list[i].url) + ":" + escape(list[i].image), "video", {
-					title: new showtime.RichText(list[i].title),
-					description: list[i].description ? new showtime.RichText(list[i].description) : list[i].title,
-					icon: new showtime.RichText(list[i].image)
-				});
-			}
-			page.appendItem(PREFIX + ":browse:" + "/anime_tv/" + ":" + "Аниме TV", "directory", {
-				title: ('Дальше больше') + ' ►',
-				icon: logo
-			});
-		}
-		//Аниме Фильмы
-		//http://online.anidub.com/anime_movie/
-		{
-			page.appendItem("", "separator", {
-				title: new showtime.RichText('Аниме Фильмы')
-			});
-			var list = listScraper(BASE_URL + '/anime_movie/', false);
-			for (var i = 0; i < list.length; i++) {
-				page.appendItem(PREFIX + ":page:" + escape(list[i].title) + ":" + escape(list[i].url) + ":" + escape(list[i].image), "video", {
-					title: new showtime.RichText(list[i].title),
-					description: list[i].description ? new showtime.RichText(list[i].description) : list[i].title,
-					icon: new showtime.RichText(list[i].image)
-				});
-			}
-			page.appendItem(PREFIX + ":browse:" + "/anime_movie/" + ":" + "Аниме Фильмы", "directory", {
-				title: ('Дальше больше') + ' ►',
-				icon: logo
-			});
-		}
-		//Аниме OVA
-		//http://online.anidub.com/anime_ova/
-		{
-			page.appendItem("", "separator", {
-				title: new showtime.RichText('Аниме OVA')
-			});
-			var list = listScraper(BASE_URL + '/anime_ova/', false);
-			for (var i = 0; i < list.length; i++) {
-				page.appendItem(PREFIX + ":page:" + escape(list[i].title) + ":" + escape(list[i].url) + ":" + escape(list[i].image), "video", {
-					title: new showtime.RichText(list[i].title),
-					description: list[i].description ? new showtime.RichText(list[i].description) : list[i].title,
-					icon: new showtime.RichText(list[i].image)
-				});
-			}
-			page.appendItem(PREFIX + ":browse:" + "/anime_ova/" + ":" + "Аниме OVA", "directory", {
-				title: ('Дальше больше') + ' ►',
-				icon: logo
-			});
-		}
-		//Дорамы Онлайн
-		//http://online.anidub.com/dorama/
-		{
-			page.appendItem("", "separator", {
-				title: new showtime.RichText('Дорамы Онлайн')
-			});
-			var list = listScraper(BASE_URL + '/dorama/', false);
-			for (var i = 0; i < list.length; i++) {
-				page.appendItem(PREFIX + ":page:" + escape(list[i].title) + ":" + escape(list[i].url) + ":" + escape(list[i].image), "video", {
-					title: new showtime.RichText(list[i].title),
-					description: list[i].description ? new showtime.RichText(list[i].description) : list[i].title,
-					icon: new showtime.RichText(list[i].image)
-				});
-			}
-			page.appendItem(PREFIX + ":browse:" + "/dorama/" + ":" + "Дорамы Онлайн", "directory", {
-				title: ('Дальше больше') + ' ►',
-				icon: logo
-			});
-		}
+		
+		start_block(page, '/anime_tv/anime_ongoing/', 'Аниме Ongoing')
+		start_block(page, '/anime_tv/', 'Аниме TV')
+		start_block(page, '/anime_movie/', 'Аниме Фильмы')
+		start_block(page, '/anime_ova/', 'Аниме OVA')
+		start_block(page, '/dorama/', 'Дорамы Онлайн')
+		
 		page.appendItem(PREFIX + ":select:жанрам", "directory", {
 			title: new showtime.RichText('<font size="5" color="ffffff">' + "Аниме по жанрам" + '</font>'),
 			icon: plugin.path + "logo.png"
@@ -325,7 +254,7 @@ var html = require('showtime/html');
 	function moviePage(page, title, url, imageURL) {
 		var i = 0,
 			j = 0;
-	var videoURL;
+		var videoURL;
 		var data = {};
 		title = unescape(title);
 		url = unescape(url);
@@ -348,13 +277,13 @@ var html = require('showtime/html');
 			player = respond.match(/<div class="players">[\S\s]+?<div id="banner_post"/)[0]
 		}
 		p(player)
-		
+
 		//value=.*?(video_ext.php\?oid=-\d+&id=\d+&hash=[a-f\d]+).*?\|(\d+).*?>(.*?)<
 		////vk video scrape from page
 		//p('vk')
 		if (player.match(/vk_multifilm/)) {
 			p(player.match(/vk_multifilm/)[0])
-		
+
 			//vk
 			var re = /value=.*?(oid=-\d+&id=\d+&hash=[a-f\d]+).*?>(.*?)</g;
 			var m = re.execAll(player);
@@ -368,10 +297,10 @@ var html = require('showtime/html');
 						title: '[VK]' + m[i][2],
 						icon: imageURL
 					});
-		
+
 				}
 			}
-			
+
 			//mw
 			var re = /value=.(.*?video\/[a-f\d]+\/iframe).*?>(.*?)</g;
 			var m = re.execAll(player);
@@ -386,15 +315,15 @@ var html = require('showtime/html');
 					});
 				}
 			}
-			
-			
-			
-			
-			
+
+
+
+
+
 		}
 		if (player.match(/vk_onefilm/)) {
 			p(player.match(/vk_onefilm/)[0])
-		
+
 			var re = /'film_main' src=.*?(oid=-\d+&id=\d+&hash=[a-f\d]+).*? width/g;
 			var m = re.exec(respond)
 			p('m2' + m)
@@ -407,43 +336,43 @@ var html = require('showtime/html');
 					icon: imageURL
 				});
 			}
-		
-		
-		
+
+
+
 		}
-		
-		
+
+
 		var re = /value="(http:\/\/player.adcdn.tv\/embed[^|]+).*?>([^<]+)/g
 		var m = re.execAll(player)
-				
+
 		p(m)
 		if (m) {
 			page.appendItem("", "separator", {
 				title: new showtime.RichText('Наш плеер (Beta)')
 			});
-		
+
 			for (i = 0; i < m.length; i++) {
 				p(m[i])
 				page.appendItem(PREFIX + ':play:' + encodeURIComponent(m[i][1]) + ':' + encodeURIComponent(m[i][2]), 'video', {
 					title: '[hls]' + m[i][2],
 					icon: imageURL
 				});
-		
+
 			}
 		}
 		//
 		////mw video scrape from page
-		if (player.match(/mcode_block/) && !player.match(/vk_multifilm/)){
-			
+		if (player.match(/mcode_block/) && !player.match(/vk_multifilm/)) {
+
 			p(player.match(/http:.*?video\/[a-f\d]+\/iframe/)[0])
-							page.appendItem("", "separator", {
-					title: new showtime.RichText('Основной плеер MW')
-				});
+			page.appendItem("", "separator", {
+				title: new showtime.RichText('Основной плеер MW')
+			});
 			page.appendItem(PREFIX + ':play:' + encodeURIComponent(player.match(/http:.*?video\/[a-f\d]+\/iframe/)[0]) + ':' + encodeURIComponent(title), 'video', {
 				title: '[MW_S]' + title,
 				icon: imageURL
 			});
-		
+
 		}
 		//	//value=.(.*?video\/[a-f\d]+\/iframe).*?>(.*?)<
 		//	var re = /value=.(.*?video\/[a-f\d]+\/iframe).*?>(.*?)</g;
@@ -538,40 +467,16 @@ var html = require('showtime/html');
 		page.metadata.background = 'http://online.anidub.com/templates/Anidub_online/img/bg_1.jpg';
 		try {
 			html = http.request(BASE_URL);
-			if (url == 'годам') {
 				re = /<a title="(.+?)" href="(.+?)"/g;
-				m = re.execAll(/sublink">Аниме по годам<[\S\s]*?<\/ul>/.exec(html));
+				re2 = new RegExp('sublink">Аниме по '+url+'<[\\S\\s]*?</ul>');
+				m = re.execAll(re2.exec(html));
 				for (i = 0; i < m.length; i++) {
-					page.appendItem(PREFIX + ":browse:" + (m[i][2] + '/' + ':' + (m[i][1])), "video", {
+					page.appendItem(PREFIX + ":browse:" + (m[i][2] + ':' + (m[i][1])), "video", {
 						title: new showtime.RichText(m[i][1]),
 						description: new showtime.RichText(m[i][2]),
 						icon: plugin.path + "logo.png"
 					});
 				}
-			}
-			if (url == 'даберам') {
-				re = /<a title="(.+?)" href="(.+?)"/g;
-				m = re.execAll(/sublink">Аниме по даберам<[\S\s]*?<\/ul>/.exec(html));
-				for (i = 0; i < m.length; i++) {
-					page.appendItem(PREFIX + ":browse:" + (m[i][2] + '/' + ':' + (m[i][1])), "video", {
-						title: new showtime.RichText(m[i][1]),
-						description: new showtime.RichText(m[i][2]),
-						icon: plugin.path + "logo.png"
-					});
-				}
-			}
-			if (url == 'жанрам') {
-				html = http.request(BASE_URL);
-				re = /<a title="(.+?)" href="(.+?)"/g;
-				m = re.execAll(/sublink">Аниме по жанрам<[\S\s]*?<\/ul>/.exec(html));
-				for (i = 0; i < m.length; i++) {
-					page.appendItem(PREFIX + ":browse:" + (m[i][2] + '/' + ':' + (m[i][1])), "video", {
-						title: new showtime.RichText(m[i][1]),
-						description: new showtime.RichText(m[i][2]),
-						icon: plugin.path + "logo.png"
-					});
-				}
-			}
 
 		} catch (ex) {
 			page.error("Failed to process categories page (get_cat)");
@@ -713,7 +618,7 @@ var html = require('showtime/html');
 		}
 
 		if (url.indexOf('player.adcdn.tv') !== -1) {
-			url = url.replace('embed', 'i')
+			//url = url.replace('embed', 'i')
 			v = http.request(url, {
 				method: 'GET',
 				headers: {
@@ -790,7 +695,8 @@ var html = require('showtime/html');
 	RegExp.prototype.execAll = function(str) {
 		var match = null
 		for (var matches = []; null !== (match = this.exec(str));) {
-			var matchArray = [],i;
+			var matchArray = [],
+				i;
 			for (i in match) {
 				parseInt(i, 10) == i && matchArray.push(match[i]);
 			}
@@ -827,8 +733,8 @@ var html = require('showtime/html');
 
 	function p(message) {
 		if (service.debug == '1') {
-			if (typeof(message) === 'object') print(dump(message))
 			print(message);
+			if (typeof(message) === 'object') print(dump(message))
 		}
 	}
 
