@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 1.1.3
+//ver 1.1.4
 var http = require('showtime/http');
 //var html = require('showtime/html');
 
@@ -285,7 +285,7 @@ var http = require('showtime/http');
 			p(player.match(/vk_multifilm/)[0])
 
 			//vk
-			var re = /value=.*?(oid=-\d+&id=\d+&hash=[a-f\d]+).*?>(.*?)</g;
+			var re = /value=.*?oid=(-\d+&id=\d+)&hash=[a-f\d]+.*?.*?>(.*?)</g;
 			var m = re.execAll(player);
 			if (m) {
 				page.appendItem("", "separator", {
@@ -324,7 +324,7 @@ var http = require('showtime/http');
 		if (player.match(/vk_onefilm/)) {
 			p(player.match(/vk_onefilm/)[0])
 
-			var re = /'film_main' src=.*?(oid=-\d+&id=\d+&hash=[a-f\d]+).*? width/g;
+			var re = /'film_main' src=.*?oid=(-\d+&id=\d+)&hash=[a-f\d]+.*?.*? width/g;
 			var m = re.exec(respond)
 			p('m2' + m)
 			if (m.length !== 0) {
@@ -491,6 +491,9 @@ var http = require('showtime/http');
 	// Play links
 	plugin.addURI(PREFIX + ":play:(.*):(.*)", function(page, url, title) {
 		page.loading = true;
+		//videoparams = {}
+		//videoparams.canonicalUrl = PREFIX + ":play:" + url + ":" + title,
+
 		var canonicalUrl = PREFIX + ":play:" + url + ":" + title
 		p(canonicalUrl)
 		title = decodeURIComponent(title);
@@ -513,28 +516,55 @@ var http = require('showtime/http');
 
 
 		//vk.com
-		if (url.indexOf("oid=") !== -1) {
+		if (url.match(/-\d+&id=\d+/)) {
+			//http://vk.com/oid=-57862318&id=171238098&hash=2929b930735ac2e8
 			p('Open url:' + 'http://vk.com/' + url);
 			page.metadata.title = title
-			vars = JSON.parse(http.request('https://api.vk.com/method/video.getEmbed?' + url.replace('&id', '&video_id').replace('&hash', '&embed_hash')).toString());
+			//al_video.php', {act: 'inc_view_counter', oid: oid, vid: vid, hash: hash}
+			//p(JSON.parse(http.request('http://vk.com/al_video.php',{
+			//	method: 'POST',
+			//	postdata:{
+			//	'act':'show',
+			//	'al':1,
+			//
+			//	///al_video.php#act=show&list=&module=video&video='+mvData
+			//	//'autoplay':1,
+			//	//'list':'',
+			//	//'module':'video',
+			//
+			//	'video':'-23081559_171000595'
+			//
+			//	}
+			//
+			//	}).toString().match(/var vars = (.*);/)[1]))
+			vars = http.request('http://vk.com/al_video.php', {
+				method: 'POST',
+				postdata: {
+					'act': 'show',
+					'al': 1,
+					'video': url.replace('&id=', '_')
+				}
+			}).toString()
+			//vars = JSON.parse(http.request('https://api.vk.com/method/video.getEmbed?' + url.replace('&id', '&video_id').replace('&hash', '&embed_hash')).toString());
+			vars = JSON.parse(vars.match(/var vars = (.*);/)[1])
 			p(vars)
 			if (vars.error) {
 				page.metadata.title = vars.error.error_msg
 				popup.notify(vars.error.error_msg + '\n' + 'This video has been removed from public access.', 3)
 
 			} else {
-				for (key in vars.response) {
+				for (key in vars) {
 					if (key == 'cache240' || key == 'cache360' || key == 'cache480' || key == 'cache720' || key == 'url240' || key == 'url360' || key == 'url480' || key == 'url720') {
 						videoparams.sources = [{
-								url: vars.response[key],
+								url: vars[key],
 								mimetype: "video/quicktime"
 							}
 						]
 						video = "videoparams:" + JSON.stringify(videoparams)
 						page.appendItem(video, "video", {
 							title: "[" + key.match(/\d+/g) + "]-" + title /*+ " | " + 'data.season' + " \u0441\u0435\u0437\u043e\u043d  | " + 'data.episode' + " \u0441\u0435\u0440\u0438\u044f"*/ ,
-							duration: vars.response.duration,
-							icon: vars.response.thumb
+							duration: vars.duration,
+							icon: vars.jpg
 						});
 					}
 				}
@@ -626,7 +656,7 @@ var http = require('showtime/http');
 				}
 			}).toString();
 			videoparams.sources = [{
-					url: /file: '([^']+)/.exec(v)[1]
+					url: 'hls:' + /file: '([^']+)/.exec(v)[1]
 				}
 			]
 			video = "videoparams:" + JSON.stringify(videoparams)
