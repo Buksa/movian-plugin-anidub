@@ -16,9 +16,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 1.1.4
+//ver 1.1.5
 var http = require('showtime/http');
-//var html = require('showtime/html');
+var html = require('showtime/html');
 
 (function(plugin) {
 	var plugin_info = plugin.getDescriptor();
@@ -104,7 +104,43 @@ var http = require('showtime/http');
 		page.metadata.backgroundAlpha = 0.5;
 		page.loading = true;
 		var list = '';
+		respond = http.request(BASE_URL, {
+			method: 'GET',
+			headers: {
+				'User-Agent': USER_AGENT
+			},
+			noFail: true
+		})
+		if (respond.statuscode === 503) {
 
+			//respond = http.request('http://pastebin.com/raw.php?i=G1tHmFV8')
+
+			match = /name="jschl_vc" value="(\w+)"/.exec(respond);
+			jschl_vc = match != null ? match[1] : "";
+			match = /name="pass" value="([^\n]+?)"/.exec(respond);
+			pass = match != null ? match[1] : "";
+
+			var match = /setTimeout\(function\(\)\{\s+(var t,r,a,f[^\n]+?\r?\n[\s\S]+?a\.value =[^\n]+?)\r?\n/.exec(respond);
+			result = match != null ? match[1] : "";
+			result = result.replace(/a\.value =(.+?) \+ .+?;/g, "$1");
+			result = result.replace(/\s{3,}[a-z](?: = |\.).+/g, "");
+
+			jschl_answer = (+(eval(result)) + +BASE_URL.split("/")[2].length)
+
+			setTimeout(function() {
+				respond = http.request('http://online.anidub.com/cdn-cgi/l/chk_jschl?jschl_vc=' + jschl_vc + '&pass=' + pass + '&jschl_answer=' + jschl_answer, {
+					//method: 'GET',
+					headers: {
+						'Referer': BASE_URL,
+						'User-Agent': USER_AGENT
+					},
+					noFail: true
+				})
+			}, 4000);
+
+
+		}
+		p(respond)
 		start_block(page, '/anime_tv/anime_ongoing/', 'Аниме Ongoing')
 		start_block(page, '/anime_tv/', 'Аниме TV')
 		start_block(page, '/anime_movie/', 'Аниме Фильмы')
@@ -602,15 +638,25 @@ var http = require('showtime/http');
 			var postdata = {}
 			postdata = /post\('\/sessions\/create_session', \{([^\}]+)/.exec(v)[1]
 			p(postdata)
+			MOON_E = /'X-MOON-EXPIRED', "([^"]+)/.exec(v)[1];
+			MOON_T = /'X-MOON-TOKEN', "([^"]+)/.exec(v)[1]
+
 			postdata = {
 				partner: /partner: (.*),/.exec(v)[1],
 				d_id: /d_id: (.*),/.exec(v)[1],
 				video_token: /video_token: '(.*)'/.exec(v)[1],
 				content_type: /content_type: '(.*)'/.exec(v)[1],
-				access_key: /access_key: '(.*)'/.exec(v)[1]
-			}
+				access_key: /access_key: '(.*)'/.exec(v)[1],
+				cd: 0
+			};
 			json = JSON.parse(http.request(hdcdn.match(/http:\/\/.*?\//) + 'sessions/create_session', {
-				debug: service.debug,
+				debug: true,
+				headers: {
+					'X-MOON-EXPIRED': MOON_E,
+					'X-MOON-TOKEN': MOON_T,
+					'X-Requested-With': 'XMLHttpRequest',
+					'Referer': data.url
+				},
 				postdata: postdata
 			}));
 			result_url = 'hls:' + json.manifest_m3u8;
