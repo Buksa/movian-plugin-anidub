@@ -107,7 +107,7 @@ var html = require('showtime/html');
 		respond = http.request(BASE_URL, {
 			method: 'GET',
 			headers: {
-				'User-Agent': USER_AGENT
+				//'User-Agent': USER_AGENT
 			},
 			noFail: true
 		})
@@ -129,10 +129,10 @@ var html = require('showtime/html');
 
 			setTimeout(function() {
 				respond = http.request('http://online.anidub.com/cdn-cgi/l/chk_jschl?jschl_vc=' + jschl_vc + '&pass=' + pass + '&jschl_answer=' + jschl_answer, {
-					//method: 'GET',
+					method: 'GET',
 					headers: {
 						'Referer': BASE_URL,
-						'User-Agent': USER_AGENT
+						//'User-Agent': USER_AGENT
 					},
 					noFail: true
 				})
@@ -176,7 +176,7 @@ var html = require('showtime/html');
 			respond = http.request(BASE_URL + '/catalog/', {
 				method: 'GET',
 				headers: {
-					'User-Agent': USER_AGENT
+					//'User-Agent': USER_AGENT
 				}
 			}).toString();
 			var re = /<ul class="cats">([\s\S]*)<\/ul>/; //finding menu
@@ -256,7 +256,7 @@ var html = require('showtime/html');
 			respond = http.request(url, {
 				method: 'GET',
 				headers: {
-					'User-Agent': USER_AGENT
+					//'User-Agent': USER_AGENT
 				}
 			}).toString()
 		}
@@ -301,7 +301,7 @@ var html = require('showtime/html');
 		var respond = http.request(url, {
 			method: 'GET',
 			headers: {
-				'User-Agent': USER_AGENT
+				//'User-Agent': USER_AGENT
 			}
 		}).toString()
 		//var dom = html.parse(http.request(url))
