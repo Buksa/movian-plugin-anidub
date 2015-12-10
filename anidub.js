@@ -16,834 +16,648 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 1.1.5
+//ver 2.1.1
+// Import required modules.
+//var XML = require('showtime/xml');
+var page = require('showtime/page');
 var http = require('showtime/http');
 var html = require('showtime/html');
+var service = require('showtime/service');
+var settings = require('showtime/settings');
+var popup = require('native/popup');
+var plugin = JSON.parse(Plugin.manifest);
+var PREFIX = plugin.id;
+var BASE_URL = "http://online.anidub.com";
+var logo = Plugin.path + "logo.png";
+//tos
+var tos = 'The developer has no affiliation with the sites what so ever.\n';
+tos += 'Nor does he receive money or any other kind of benefits for them.\n\n';
+tos += 'The software is intended solely for educational and testing purposes,\n';
+tos += 'and while it may allow the user to create copies of legitimately acquired\n';
+tos += 'and/or owned content, it is required that such user actions must comply\n';
+tos += 'with local, federal and country legislation.\n\n';
+tos += 'Furthermore, the author of this software, its partners and associates\n';
+tos += 'shall assume NO responsibility, legal or otherwise implied, for any misuse\n';
+tos += 'of, or for any loss that may occur while using plugin.\n\n';
+tos += 'You are solely responsible for complying with the applicable laws in your\n';
+tos += 'country and you must cease using this software should your actions during\n';
+tos += 'plugin operation lead to or may lead to infringement or violation of the\n';
+tos += 'rights of the respective content copyright holders.\n\n';
+tos += "plugin is not licensed, approved or endorsed by any online resource\n ";
+tos += "proprietary. Do you accept this terms?";
 
-(function(plugin) {
-	var plugin_info = plugin.getDescriptor();
-	var PREFIX = plugin_info.id;
-	// bazovyj adress saita
-	var BASE_URL = 'http://online.anidub.com';
-	//logo
-	var logo = plugin.path + 'logo.png';
-	var USER_AGENT = 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:16.0) Gecko/20120815 Firefox/16.0';
+// Service creation
+service.create(plugin.title, PREFIX + ":start", "video", true, Plugin.path + "logo.png");
+/*******************************************************************************
+ * // Settings
+ ******************************************************************************/
+settings.globalSettings(plugin.id, plugin.title, Plugin.path + "logo.png", plugin.synopsis);
+// General settings
+settings.createDivider("General");
+settings.createInt("frontPageEntriesPerCategory", "Entries per category on front page", 8, 4, 16, 1, "", function(v) {
+	service.frontPageEntriesPerCategory = v;
+});
+settings.createBool("tosaccepted", "Accepted TOS (available in opening the plugin):", false, function(v) {
+	service.tosaccepted = v;
+});
+// Enable / disable debug setting
+settings.createBool("debug", "Debug", false, function(v) {
+	service.debug = v;
+});
 
-	function setPageHeader(page, title) {
-		if (page.metadata) {
-			page.metadata.title = PREFIX + ' : ' + title;
-			page.metadata.logo = logo;
+
+/*******************************************************************************
+ * // Miscellaneous functions
+ ******************************************************************************/
+/**
+ * regExpExec returns the regexp or an array with 2 empty strings
+ * <p>
+ * This function returns the regexp array or an array with two elements
+ * containing empty strings. For use when parsing working with parsed xml data
+ * in order to avoid an error if we lack a match. But also to avoid using tons
+ * of if(regexp_result == null) statements everywhere.
+ * <p>
+ * Param and return values.
+ *
+ * @param expression
+ *            the regular expression
+ * @param modifier
+ *            regexp modifier
+ * @param string
+ *            with content to match against
+ * @return Returns the matched element or an empty string
+ */
+
+function regExpExec(expression, modifier, string) {
+	var returnValue;
+	returnValue = new RegExp(expression, modifier).exec(string);
+	returnValue = (returnValue === null) ? [null, ""] : returnValue;
+	return returnValue;
+}
+
+/**
+ * getTitles lists titles from site urls.
+ * Param and return values.
+ * @param url
+ *            The url to parse.
+ * @param numItems
+ *            Amount of items to return
+ * @return A matrix with the requested values.
+ */
+
+function getTitles(url, numItems, callback) {
+	p("getTitles(): getTitles(url, numItems) called with arguments url: " + url + " and numItems (optional): " + numItems)
+	var urlData, data, listData, regExp;
+	var returnValue = [];
+	// Request the supplied url.
+	var urlData = http.request(url, {
+		method: 'GET',
+		noFail: true
+	}) //.toString();
+	if (urlData.statuscode === 200) {
+		// Extract all the content listings off the requested url
+		data = new RegExp('dle-content([\\s\\S]+)END CONTENT', 'g').exec(urlData)[1];
+		if (data === null || urlData.statuscode === 404) {
+			var returnValue;
+			var tmp = [null, null, null, null, null, null, null];
+			returnValue.push(tmp);
+
+			return returnValue;
 		}
-		page.type = "directory";
-		page.contents = "items";
-		page.loading = false;
+		regExp = new RegExp('newstitle([\\s\\S]+?)newsfoot', 'g');
+		i = 0;
+		while (((listData = regExp.exec(data)) !== null) /*&& (i <= numItems)*/ ) {
+			var tmp = {
+				url: regExpExec('title[\\s\\S]+?href="http:\\/\\/online.anidub.com([^"]+).*?>([^<]+)', 'g', listData[1])[1],
+				title: regExpExec('title[\\s\\S]+?href="([^"]+).*?>([^<]+)', 'g', listData[1])[2],
+				year: regExpExec("xfsearch\\/(\\d{4})", 'g', listData[1])[1],
+				icon: regExpExec("data-original=\"([^\"]+)", 'g', listData[1])[1],
+				description: regExpExec('description">[\\s\\S]+?">([^<]+)', 'g', listData[1])[1],
+				genre: regExpExec('<small>([^<]+)', 'g', listData[1])[1],
+				rating: parseFloat(regExpExec('-star"><\\/span>([^<]+)', 'g', listData[1])[1]) * 10
+			}
+			returnValue.push(tmp);
+			i++;
+		}
 	}
-	//tos
-	var tos = 'The developer has no affiliation with the sites what so ever.\n';
-	tos += 'Nor does he receive money or any other kind of benefits for them.\n\n';
-	tos += 'The software is intended solely for educational and testing purposes,\n';
-	tos += 'and while it may allow the user to create copies of legitimately acquired\n';
-	tos += 'and/or owned content, it is required that such user actions must comply\n';
-	tos += 'with local, federal and country legislation.\n\n';
-	tos += 'Furthermore, the author of this software, its partners and associates\n';
-	tos += 'shall assume NO responsibility, legal or otherwise implied, for any misuse\n';
-	tos += 'of, or for any loss that may occur while using plugin.\n\n';
-	tos += 'You are solely responsible for complying with the applicable laws in your\n';
-	tos += 'country and you must cease using this software should your actions during\n';
-	tos += 'plugin operation lead to or may lead to infringement or violation of the\n';
-	tos += 'rights of the respective content copyright holders.\n\n';
-	tos += "plugin is not licensed, approved or endorsed by any online resource\n ";
-	tos += "proprietary. Do you accept this terms?";
-	// Register a service (will appear on home page)
-	var service = plugin.createService("AniDub", PREFIX + ":start", "video", true, logo);
-	//settings
-	var settings = plugin.createSettings("AniDub", logo, "Online Videos");
-	//	settings.createInfo("info", logo, "Developed by " + plugin_info.author + ". \n");
-	settings.createDivider('Settings:');
-	settings.createBool("tosaccepted", "Accepted TOS (available in opening the plugin):", false, function(v) {
-		service.tosaccepted = v;
-	});
-	settings.createDivider('Browser Settings');
-	settings.createInfo("info2", '', "Чем меньше значение - тем быстрее подгрузка списков в директориях с большим количеством файлов, но тем больше вероятность ошибки сервера. \n");
-	settings.createInt("Min.Delay", "Интервал запросов к серверу (default: 3 сек)", 3, 1, 10, 1, 'сек', function(v) {
-		service.requestMinDelay = v;
-	});
-
-	settings.createBool("Show_finished", "Показывать сообщение о достижении конца директории", true, function(v) {
-		service.showEndOfDirMessage = v;
-	});
-	settings.createBool("debug", "Debug", false, function(v) {
-		service.debug = v;
-	});
-
-	//First level start page
-
-	function start_block(page, href, title) {
-		page.appendItem("", "separator", {
-			title: new showtime.RichText(title)
-		});
-		p(listScraper(BASE_URL + href));
-		var list = listScraper(BASE_URL + href, false);
-		for (var i = 0; i < list.length; i++) {
-			page.appendItem(PREFIX + ":page:" + escape(list[i].title) + ":" + escape(list[i].url) + ":" + escape(list[i].image), "video", {
-				title: new showtime.RichText(list[i].title),
-				description: list[i].description ? new showtime.RichText(list[i].description) : list[i].title,
-				icon: new showtime.RichText(list[i].image)
-			});
-		}
-		page.appendItem(PREFIX + ":browse:" + href + ":" + title, "directory", {
-			title: ('Дальше больше') + ' ►',
-			icon: logo
-		});
+	p('getTitles return:' + dump(returnValue))
+	if (callback) {
+		callback(returnValue);
+	} else {
+		return returnValue;
 	}
+}
 
-	function startPage(page) {
-		if (!service.tosaccepted)
-			if (popup.message(tos, true, true)) service.tosaccepted = 1;
-			else page.error("TOS not accepted. plugin disabled");
-		page.metadata.backgroundAlpha = 0.5;
-		page.loading = true;
-		var list = '';
-		respond = http.request(BASE_URL, {
-			method: 'GET',
-			headers: {
-				//'User-Agent': USER_AGENT
-			},
-			noFail: true
-		})
-		if (respond.statuscode === 503) {
-
-			//respond = http.request('http://pastebin.com/raw.php?i=G1tHmFV8')
-
-			match = /name="jschl_vc" value="(\w+)"/.exec(respond);
-			jschl_vc = match != null ? match[1] : "";
-			match = /name="pass" value="([^\n]+?)"/.exec(respond);
-			pass = match != null ? match[1] : "";
-
-			var match = /setTimeout\(function\(\)\{\s+(var t,r,a,f[^\n]+?\r?\n[\s\S]+?a\.value =[^\n]+?)\r?\n/.exec(respond);
-			result = match != null ? match[1] : "";
-			result = result.replace(/a\.value =(.+?) \+ .+?;/g, "$1");
-			result = result.replace(/\s{3,}[a-z](?: = |\.).+/g, "");
-
-			jschl_answer = (+(eval(result)) + +BASE_URL.split("/")[2].length)
-
-			setTimeout(function() {
-				respond = http.request('http://online.anidub.com/cdn-cgi/l/chk_jschl?jschl_vc=' + jschl_vc + '&pass=' + pass + '&jschl_answer=' + jschl_answer, {
-					method: 'GET',
-					headers: {
-						'Referer': BASE_URL,
-						//'User-Agent': USER_AGENT
-					},
-					noFail: true
-				})
-			}, 4000);
-
-
-		}
-		p(respond)
-		start_block(page, '/anime_tv/anime_ongoing/', 'Аниме Ongoing')
-		start_block(page, '/anime_tv/', 'Аниме TV')
-		start_block(page, '/anime_movie/', 'Аниме Фильмы')
-		start_block(page, '/anime_ova/', 'Аниме OVA')
-		start_block(page, '/dorama/', 'Дорамы Онлайн')
-
-		page.appendItem(PREFIX + ":select:жанрам", "directory", {
-			title: new showtime.RichText('<font size="5" color="ffffff">' + "Аниме по жанрам" + '</font>'),
-			icon: plugin.path + "logo.png"
-		});
-		page.appendItem(PREFIX + ":select:даберам", "directory", {
-			title: new showtime.RichText('<font size="5" color="ffffff">' + "Аниме по даберам" + '</font>'),
-			icon: plugin.path + "logo.png"
-		});
-		page.appendItem(PREFIX + ":select:годам", "directory", {
-			title: new showtime.RichText('<font size="5" color="ffffff">' + "Аниме по годам" + '</font>'),
-			icon: plugin.path + "logo.png"
-		});
-		page.type = "directory";
-		page.contents = "items";
-		page.loading = false;
-		page.metadata.logo = plugin.path + "logo.png";
-		page.metadata.title = 'AniDub';
-		//page.metadata.background = 'http://online.anidub.com/templates/Anidub_online/img/bg_1.jpg';
+function getTitleInfo(path, page) {
+	var url, urlData, data;
+	url = BASE_URL + path;
+	urlData = http.request(url).toString();
+	data = new RegExp('newstitle([\\s\\S]+?)newsfoot', 'g').exec(urlData);
+	if (data === null) {
+		return 0;
 	}
-
-	function browseListPage(page, genre, genreName) {
-		var respond = '';
-		var url = '';
-		if (!genre || genre == 'all') {
-			//make genre list
-			p(BASE_URL + '/catalog/');
-			respond = http.request(BASE_URL + '/catalog/', {
-				method: 'GET',
-				headers: {
-					//'User-Agent': USER_AGENT
-				}
-			}).toString();
-			var re = /<ul class="cats">([\s\S]*)<\/ul>/; //finding menu
-			var menuHTML = respond.match(re)[1];
-			re = /<li><a href="\/([\S]*)\/">(\S*)<\/a><\/li>/g;
-			var menu = re.exec(menuHTML);
-			while (menu) {
-				p("M:" + menu);
-				page.appendItem(PREFIX + ':movies:' + menu[1] + ':' + menu[2], 'directory', {
-					title: menu[2],
-					icon: logo
-				});
-				menu = re.exec(menuHTML);
-			}
-		} //endif
-		//genre defined
-		else {
-			var pageNumber = 1;
-			var list;
-			var requestFinished = true,
-				lastRequest = 0;
-			var loader = function() {
-				if (!requestFinished) {
-					p("Request not finished yet, exiting");
-					return false;
-				}
-				var delay = countDelay(service.requestMinDelay * 1000, lastRequest);
-				var loadItems = function() {
-					try {
-						lastRequest = Date.now();
-						requestFinished = false;
-						p(Date.now())
-						p("Time to make some requests now!");
-						//make request here
-						p("L:" + BASE_URL + genre + "page/" + pageNumber + '/');
-						list = listScraper(BASE_URL + genre + "page/" + pageNumber + "/", false);
-						pageNumber++;
-						requestFinished = true;
-						p("Request finished!");
-						return list;
-					} catch (err) {
-						//end of pages
-						if (err.message.match('HTTP error: 404')) {
-							popup.notify("Достигнут конец директории.", 5);
-							return false;
-						}
-						//most probably server overload
-						else {
-							popup.notify("Подгрузка не удалась. Возможно, сервер перегружен.", 5);
-							//trying to reload the page
-							pageNumber--;
-							return true;
-						}
-					}
-				};
-				p("Let's wait " + delay + " msec before making a request!");
-				sleep(delay)
-				var list = loadItems();
-				for (var i = 0; i < list.length; i++) {
-					page.appendItem(PREFIX + ":page:" + escape(list[i].title) + ":" + escape(list[i].url) + ":" + escape(list[i].image), "video", {
-						title: new showtime.RichText(list[i].title),
-						description: list[i].description ? new showtime.RichText(list[i].description) : '',
-						icon: list[i].image
-					});
-				}
-				return true;
-			}
-			loader();
-			page.paginator = loader;
-		}
-		setPageHeader(page, genreName);
+	var tmp = {
+		//url: regExpExec('title[\\s\\S]+?href="http:\\/\\/online.anidub.com([^"]+).*?>([^<]+)', 'g', data[1])[1],
+		title: regExpExec("titlfull.*?> ([^<]+)", 'g', data[1])[1],
+		year: regExpExec("xfsearch\\/(\\d{4})", 'g', data[1])[1],
+		icon: regExpExec('image_src.*?href="([^"]+)', 'g', data[1])[1],
+		description: regExpExec('description">([\\s\\S]+?)<div', 'g', data[1])[1],
+		genre: regExpExec('<small>([^<]+)', 'g', data[1])[1],
+		rating: parseFloat(regExpExec('-star"><\\/span>([^<]+)', 'g', data[1])[1]) * 10
 	}
+	p('getTitleInfo return :\n' + dump(tmp));
 
-	function listScraper(url, respond) {
-		p('function listScraper (url=' + url + ',respond=' + respond + ')')
-		if (!respond) {
-			respond = http.request(url, {
-				method: 'GET',
-				headers: {
-					//'User-Agent': USER_AGENT
-				}
-			}).toString()
-		}
-		var re = /class="poster_img"><a href="([\S]*)"[\s\S]{0,300}alt="([^"]+)[\s\S]{0,300}original="([^"]+)/g;
-		//	re = /<div class="poster_img"><a href="http:\/\/online.anidub.com([^"]+)"[\S\s]+?alt="([^"]+)"[\S\s]+?="([^"]+)" src/g;
-		var items = new Array(),
-			i = 0;
-		var item = re.exec(respond);
-		while (item) {
-			p("Found title:" + item[2]);
-			items.push({
-				url: item[1],
-				title: item[2],
-				image: item[3]
-			});
-			item = re.exec(respond);
-		}
-		//	re = /<div class="img">[\S\s]{0,300}<img src="(\S*)"/g;
-		//	item = re.exec(respond);
-		//	while(item) {
-		//	  debug(item[1]);
-		//	  items[i].image = item[1];
-		//	  i++;
-		//
-		//	  item = re.exec(respond);
-		//	}
-		p('Returning list with ' + items.length + ' items');
-		return items;
-	}
+	return (tmp);
+}
 
-	function moviePage(page, title, url, imageURL) {
-		var i = 0,
-			j = 0;
-		var videoURL;
-		var data = {};
-		title = unescape(title);
-		url = unescape(url);
-		imageURL = unescape(imageURL);
-		page.loading = true;
-		//'url' here is a FULL one. There's no need to add BASE_URL.
-		p('Going for:' + url);
-		var respond = http.request(url, {
-			method: 'GET',
-			headers: {
-				//'User-Agent': USER_AGENT
-			}
-		}).toString()
-		//var dom = html.parse(http.request(url))
-		//
-		//var player = dom.root.getElementById('players');
+function p(message) {
+	if (service.debug == '1') print(message)
+}
 
-
-		if (respond.match(/<div class="players">[\S\s]+?<div id="banner_post"/)) {
-			player = respond.match(/<div class="players">[\S\s]+?<div id="banner_post"/)[0]
-		}
-		p(player)
-
-		//value=.*?(video_ext.php\?oid=-\d+&id=\d+&hash=[a-f\d]+).*?\|(\d+).*?>(.*?)<
-		////vk video scrape from page
-		//p('vk')
-		if (player.match(/vk_multifilm/)) {
-			p(player.match(/vk_multifilm/)[0])
-
-			//vk
-			var re = /value=.*?oid=(-\d+&id=\d+)&hash=[a-f\d]+.*?.*?>(.*?)</g;
-			var m = re.execAll(player);
-			if (m) {
-				page.appendItem("", "separator", {
-					title: new showtime.RichText('Основной плеер VK')
-				});
-				p(m);
-				for (i = 0; i < m.length; i++) {
-					page.appendItem(PREFIX + ':play:' + encodeURIComponent(m[i][1]) + ':' + encodeURIComponent(m[i][2]), 'video', {
-						title: '[VK]' + m[i][2],
-						icon: imageURL
-					});
-
-				}
-			}
-
-			//mw
-			var re = /value=.(.*?video\/[a-f\d]+\/iframe).*?>(.*?)</g;
-			var m = re.execAll(player);
-			if (m) {
-				page.appendItem("", "separator", {
-					title: new showtime.RichText('Основной плеер MW')
-				});
-				for (i = 0; i < m.length; i++) {
-					page.appendItem(PREFIX + ':play:' + encodeURIComponent(m[i][1]) + ':' + encodeURIComponent(m[i][2]), 'video', {
-						title: '[MW]' + m[i][2],
-						icon: imageURL
-					});
-				}
-			}
-
-
-
-
-
-		}
-		if (player.match(/vk_onefilm/)) {
-			p(player.match(/vk_onefilm/)[0])
-
-			var re = /'film_main' src=.*?oid=(-\d+&id=\d+)&hash=[a-f\d]+.*?.*? width/g;
-			var m = re.exec(respond)
-			p('m2' + m)
-			if (m.length !== 0) {
-				page.appendItem("", "separator", {
-					title: new showtime.RichText('Основной плеер')
-				});
-				page.appendItem(PREFIX + ":play:" + encodeURIComponent(m[1]) + ':' + encodeURIComponent(title), "video", {
-					title: '[VK_S]' + title,
-					icon: imageURL
-				});
-			}
-
-
-
-		}
-
-
-		var re = /value="(http:\/\/player.adcdn.tv\/embed[^|]+).*?>([^<]+)/g
-		var m = re.execAll(player)
-
-		p(m)
-		if (m) {
-			page.appendItem("", "separator", {
-				title: new showtime.RichText('Наш плеер (Beta)')
-			});
-
-			for (i = 0; i < m.length; i++) {
-				p(m[i])
-				page.appendItem(PREFIX + ':play:' + encodeURIComponent(m[i][1]) + ':' + encodeURIComponent(m[i][2]), 'video', {
-					title: m[i][2],
-					icon: imageURL
-				});
-
-			}
-		}
-		//
-		////mw video scrape from page
-		if (player.match(/mcode_block/) && !player.match(/vk_multifilm/)) {
-
-			p(player.match(/http:.*?video\/[a-f\d]+\/iframe/)[0])
-			page.appendItem("", "separator", {
-				title: new showtime.RichText('Основной плеер MW')
-			});
-			page.appendItem(PREFIX + ':play:' + encodeURIComponent(player.match(/http:.*?video\/[a-f\d]+\/iframe/)[0]) + ':' + encodeURIComponent(title), 'video', {
-				title: '[MW_S]' + title,
-				icon: imageURL
-			});
-
-		}
-		//	//value=.(.*?video\/[a-f\d]+\/iframe).*?>(.*?)<
-		//	var re = /value=.(.*?video\/[a-f\d]+\/iframe).*?>(.*?)</g;
-		//	var mw_links = re.exec(respond);
-		//	if (mw_links) {
-		//		//code
-		//		p("mw_links:" + mw_links);
-		//		while (mw_links) {
-		//			p("mw_links:" + mw_links);
-		//			p(encodeURIComponent(mw_links[1]))
-		//			page.appendItem(PREFIX + ':play:' + encodeURIComponent(mw_links[1]) + ':' + encodeURIComponent(mw_links[2]), 'video', {
-		//				title: '[MW]' + mw_links[2],
-		//				icon: imageURL
-		//			});
-		//			mw_links = re.exec(respond);
-		//		}
-		//	} else {
-		//		var video = match(/vk_onefilm[\s\S]{0,300}d='film_main' src=.*?(video_ext.php\?oid=-\d+&id=\d+&hash=[a-f\d]+).*? width/, respond);
-		//		if (video) {
-		//			page.appendItem(PREFIX + ":play:" + encodeURIComponent(video) + ':' + encodeURIComponent(title), "video", {
-		//				title: '[MW_S]' + title,
-		//				icon: imageURL
-		//			});
-		//		}
-		//	}
-		//}
-		////mw video scrape from iframe
-		//var moonwalk = match(/(http:\/\/moonwalk.cc\/serial\/.*?iframe)/, respond, 1);
-		//p('iframe: ' + moonwalk);
-		//if (moonwalk) {
-		//	var html = http.request(moonwalk, {
-		//		method: 'GET',
-		//		headers: {
-		//			'Referer': BASE_URL
-		//		}
-		//	}).toString();
-		//	re = /<option .*value="(.*)">(.*)<\/option>/g;
-		//	m = re.execAll(html.match(/<select id="season"[\S\s]+?option><\/select>/));
-		//	p('count seasons:' + m.length);
-		//	for (i = 0; i < m.length; i++) {
-		//		page.appendItem("", "separator", {
-		//			title: new showtime.RichText(m[i][2])
-		//		});
-		//		var seasons = moonwalk + '?season=' + m[i][1];
-		//		p('season ' + m[i][1]);
-		//		p('iframe: ' + seasons);
-		//		var html2 = http.request(seasons, {
-		//			method: 'GET',
-		//			headers: {
-		//				'Referer': BASE_URL
-		//			}
-		//		}).toString();
-		//		m2 = re.execAll(html2.match(/<select id="episode"[\S\s]+?option><\/select>/));
-		//		p('count episode: ' + m2.length);
-		//		for (j = 0; j < m2.length; j++) {
-		//			data.series = {
-		//				url: moonwalk + '?season=' + m[i][1] + '&episode=' + m2[j][1],
-		//				season: +m[i][1],
-		//				episode: m2[j][1]
-		//			};
-		//			page.appendItem(PREFIX + ':play:' + encodeURIComponent(data.series.url) + ':' + encodeURIComponent(title), 'video', {
-		//				title: 'episode ' + m2[j][1],
-		//				icon: imageURL
-		//			});
-		//		}
-		//	}
-		//}
-		//
-		setPageHeader(page, title);
-	}
-	plugin.addURI(PREFIX + ":browse:(.*):(.*)", browseListPage);
-	plugin.addURI(PREFIX + ":page:(.*):(.*):(.*)", moviePage);
-	plugin.addURI(PREFIX + ":start", startPage);
-
-	function countDelay(delay, lastRequest) {
-		p("Getting difference between:" + lastRequest + " and " + Date.now());
-		var timeDiff = Date.now() - lastRequest;
-		p("time sinse last call:" + timeDiff);
-		return timeDiff < delay ? delay - timeDiff : 0;
-	};
-
-	function sleep(ms) {
-		var last = Date.now();
-		for (; !(Date.now() - last > ms);) {}
-	};
-
-
-
-	plugin.addURI(PREFIX + ":select:(.*)", function(page, url) {
-		var re, m, i, html;
-		page.metadata.backgroundAlpha = 0.5;
-		page.metadata.background = 'http://online.anidub.com/templates/Anidub_online/img/bg_1.jpg';
-		try {
-			html = http.request(BASE_URL);
-			re = /<a title="(.+?)" href="(.+?)"/g;
-			re2 = new RegExp('sublink">Аниме по ' + url + '<[\\S\\s]*?</ul>');
-			m = re.execAll(re2.exec(html));
-			for (i = 0; i < m.length; i++) {
-				page.appendItem(PREFIX + ":browse:" + (m[i][2] + ':' + (m[i][1])), "video", {
-					title: new showtime.RichText(m[i][1]),
-					description: new showtime.RichText(m[i][2]),
-					icon: plugin.path + "logo.png"
-				});
-			}
-
-		} catch (ex) {
-			page.error("Failed to process categories page (get_cat)");
-			e(ex);
-		}
-		page.loading = false;
-		page.type = "directory";
-		page.contents = "items";
-		page.loading = false;
-		page.metadata.logo = logo;
-	});
-	// Play links
-	plugin.addURI(PREFIX + ":play:(.*):(.*)", function(page, url, title) {
-		page.loading = true;
-		//videoparams = {}
-		//videoparams.canonicalUrl = PREFIX + ":play:" + url + ":" + title,
-
-		var canonicalUrl = PREFIX + ":play:" + url + ":" + title
-		p(canonicalUrl)
-		title = decodeURIComponent(title);
-		url = decodeURIComponent(url);
-
-		var videoparams = {
-			canonicalUrl: canonicalUrl,
-			no_fs_scan: true,
-			//title: data.eng_title,
-			title: title,
-			//year: data.year ? data.year : 0,
-			//season: data.season ? data.season : -1,
-			//episode: data.episode ? data.episode : -1,
-			sources: [{
-					url: []
-				}
-			],
-			subtitles: []
-		};
-
-
-		//vk.com
-		if (url.match(/-\d+&id=\d+/)) {
-			//http://vk.com/oid=-57862318&id=171238098&hash=2929b930735ac2e8
-			p('Open url:' + 'http://vk.com/' + url);
-			page.metadata.title = title
-			//al_video.php', {act: 'inc_view_counter', oid: oid, vid: vid, hash: hash}
-			//p(JSON.parse(http.request('http://vk.com/al_video.php',{
-			//	method: 'POST',
-			//	postdata:{
-			//	'act':'show',
-			//	'al':1,
-			//
-			//	///al_video.php#act=show&list=&module=video&video='+mvData
-			//	//'autoplay':1,
-			//	//'list':'',
-			//	//'module':'video',
-			//
-			//	'video':'-23081559_171000595'
-			//
-			//	}
-			//
-			//	}).toString().match(/var vars = (.*);/)[1]))
-			vars = http.request('http://vk.com/al_video.php', {
-				method: 'POST',
-				postdata: {
-					'act': 'show',
-					'al': 1,
-					'video': url.replace('&id=', '_')
-				}
-			}).toString()
-			//vars = JSON.parse(http.request('https://api.vk.com/method/video.getEmbed?' + url.replace('&id', '&video_id').replace('&hash', '&embed_hash')).toString());
-			vars = JSON.parse(vars.match(/var vars = (.*);/)[1])
-			p(vars)
-			if (vars.error) {
-				page.metadata.title = vars.error.error_msg
-				popup.notify(vars.error.error_msg + '\n' + 'This video has been removed from public access.', 3)
-
+function dump(arr, level) {
+	var dumped_text = "";
+	if (!level) level = 0;
+	//The padding given at the beginning of the line.
+	var level_padding = "";
+	for (var j = 0; j < level + 1; j++) level_padding += "    ";
+	if (typeof(arr) == 'object') { //Array/Hashes/Objects
+		for (var item in arr) {
+			var value = arr[item];
+			if (typeof(value) == 'object') { //If it is an array,
+				dumped_text += level_padding + "'" + item + "' ...\n";
+				dumped_text += dump(value, level + 1);
 			} else {
-				for (key in vars) {
-					if (key == 'cache240' || key == 'cache360' || key == 'cache480' || key == 'cache720' || key == 'url240' || key == 'url360' || key == 'url480' || key == 'url720') {
-						videoparams.sources = [{
-								url: vars[key],
-								mimetype: "video/quicktime"
-							}
-						]
-						video = "videoparams:" + JSON.stringify(videoparams)
-						page.appendItem(video, "video", {
-							title: "[" + key.match(/\d+/g) + "]-" + title /*+ " | " + 'data.season' + " \u0441\u0435\u0437\u043e\u043d  | " + 'data.episode' + " \u0441\u0435\u0440\u0438\u044f"*/ ,
-							duration: vars.duration,
-							icon: vars.jpg
-						});
-					}
-				}
+				dumped_text += level_padding + "'" + item + "' => \"" + value + "\"\n";
 			}
-
 		}
+	} else { //Stings/Chars/Numbers etc.
+		dumped_text = arr;
+	}
+	return dumped_text;
+}
+/*******************************************************************************
+ * // Pages
+ ******************************************************************************/
 
-		p(url)
-		if (url.match(/http:\/\/.+?iframe/)) {
-			p('Open url:' + url.match(/http:\/\/.+?iframe/));
-			var hdcdn = url.match(/http:\/\/.+?iframe/).toString();
-			v = http.request(hdcdn, {
+function start_block(page, href, title) {
+	page.appendItem("", "separator", {
+		title: title
+	});
+	var titleList = getTitles(BASE_URL + href);
+	for (i = 0; i < 9 /*titleList.length*/ ; i++) page.appendItem(PREFIX + ":mediaInfo:" + titleList[i].url, "video", {
+			title: titleList[i].title,
+			year: parseInt(titleList[i].year, 10),
+			rating: parseInt(titleList[i].rating, 10),
+			genre: titleList[i].genre,
+			description: titleList[i].description ? titleList[i].description : titleList[i].title,
+			icon: titleList[i].icon
+		});
+	page.appendItem(PREFIX + ":index:" + href + ":" + title, "directory", {
+		title: "Дальше больше ►"
+	});
+}
+/*******************************************************************************
+ * // Page PREFIX:start
+ ******************************************************************************/
+new page.Route(PREFIX + ":start", function(page) {
+	if (!service.tosaccepted)
+		if (popup.message(tos, true, true)) service.tosaccepted = 1;
+		else page.error("TOS not accepted. plugin disabled");
+	page.metadata.title = plugin.title;
+	page.metadata.logo = Plugin.path + "logo.png";
+	page.model.contents = 'grid';
+	page.loading = true;
+	respond = http.request(BASE_URL, {
+		method: 'GET',
+		noFail: true,
+		debug: service.debug
+	});
+
+	if (respond.statuscode === 503) {
+		match = /name="jschl_vc" value="(\w+)"/.exec(respond);
+		jschl_vc = match !== null ? match[1] : "";
+		match = /name="pass" value="([^\n]+?)"/.exec(respond);
+		pass = match !== null ? match[1] : "";
+		match = /setTimeout\(function\(\)\{\s+(var t,r,a,f[^\n]+?\r?\n[\s\S]+?a\.value =[^\n]+?)\r?\n/.exec(respond);
+		result = match !== null ? match[1] : "";
+		result = result.replace(/a\.value =(.+?) \+ .+?;/g, "$1");
+		result = result.replace(/\s{3,}[a-z](?: = |\.).+/g, "");
+		jschl_answer = (+(eval(result)) + +BASE_URL.split("/")[2].length);
+		setTimeout(function() {
+			respond = http.request('http://online.anidub.com/cdn-cgi/l/chk_jschl?jschl_vc=' + jschl_vc + '&pass=' + pass + '&jschl_answer=' + jschl_answer, {
+				debug: service.debug,
 				method: 'GET',
 				headers: {
-					'Referer': BASE_URL
-				}
-			}).toString();
-			p(v)
-			//$.post('/sessions/create_session', {
-			//    partner: 250,
-			//    d_id: 6545,
-			//    video_token: '9ef85ccd47347169',
-			//    content_type: 'movie',
-			//    access_key: 'MNW4q9pL82sHxV'
-			//  }).success(function(video_url) {
-			//    ga('send', 'event', 'session', '9ef85ccd47347169');
-			//
-			//      if (isMobile.Android() || isMobile.iOS()) {
-			//        player_hls(video_url.manifest_m3u8);
-			//      } else {
-			//        player_osmf('AniDub/[AniDub]_World_Trigger_[720p]_[Manaoki_Holly]/[AniDub]_World_Trigger_[01]_[720p_x264_Aac]_[Manaoki_Holly].mp4', video_url.manifest_f4m, 'player');
-			//      }
-			//  });
-			page.metadata.title = /player_osmf\('([^']+)/.exec(v)[1];
-			var postdata = {}
-			postdata = /post\('\/sessions\/create_session', \{([^\}]+)/.exec(v)[1]
-			p(postdata)
-			MOON_E = /'X-MOON-EXPIRED', "([^"]+)/.exec(v)[1];
-			MOON_T = /'X-MOON-TOKEN', "([^"]+)/.exec(v)[1]
-
-			postdata = {
-				partner: /partner: (.*),/.exec(v)[1],
-				d_id: /d_id: (.*),/.exec(v)[1],
-				video_token: /video_token: '(.*)'/.exec(v)[1],
-				content_type: /content_type: '(.*)'/.exec(v)[1],
-				access_key: /access_key: '(.*)'/.exec(v)[1],
-				cd: 0
-			};
-			json = JSON.parse(http.request(hdcdn.match(/http:\/\/.*?\//) + 'sessions/create_session', {
-				debug: true,
-				headers: {
-					'X-MOON-EXPIRED': MOON_E,
-					'X-MOON-TOKEN': MOON_T,
-					'X-Requested-With': 'XMLHttpRequest',
-					'Referer': data.url
+					'Referer': BASE_URL,
+					//'User-Agent': USER_AGENT
 				},
-				postdata: postdata
-			}));
-			result_url = 'hls:' + json.manifest_m3u8;
+				noFail: true
+			})
+		}, 4000);
+	}
 
-			videoparams.sources = [{
-					url: 'hls:' + json.manifest_m3u8
-				}
-			]
-			video = "videoparams:" + JSON.stringify(videoparams)
-			page.appendItem(video, "video", {
-				title: "[Auto]-" + title
-				/* + " | " + 'data.season' + " \u0441\u0435\u0437\u043e\u043d  | " + 'data.episode' + " \u0441\u0435\u0440\u0438\u044f",
-							duration: vars.response.duration,
-							icon: vars.response.thumb*/
-			});
-			var video_urls = http.request(json.manifest_m3u8).toString()
-			p(video_urls)
-			var video_urls = /RESOLUTION=([^,]+)[\s\S]+?(http.*)/g.execAll(video_urls);
-			p(video_urls)
-			for (i in video_urls) {
-				videoparams.sources = [{
-						url: 'hls:' + video_urls[i][2]
-					}
-				]
-				video = "videoparams:" + JSON.stringify(videoparams)
-				page.appendItem(video, "video", {
-					title: "[" + video_urls[i][1] + "]-" + title
-					/* + " | " + 'data.season' + " \u0441\u0435\u0437\u043e\u043d  | " + 'data.episode' + " \u0441\u0435\u0440\u0438\u044f",
-							duration: vars.response.duration,
-							icon: logo*/
+	start_block(page, '/anime_tv/anime_ongoing/', 'Аниме Ongoing')
+	start_block(page, '/full/', 'Аниме FULL')
+	start_block(page, '/anime_tv/', 'Аниме TV')
+	start_block(page, '/anime_movie/', 'Аниме Фильмы')
+	start_block(page, '/anime_ova/', 'Аниме OVA')
+	start_block(page, '/dorama/', 'Дорамы')
+	/*page.appendItem(PREFIX + ":index:/movies/:Filmer SD", "directory", {
+	//	title: "Visa mer ►"
+	//});
+	//page.appendItem(PREFIX + ":indexByGenre:/movies/:Filmer SD sorterat efter genre", "directory", {
+	//	title: "Visa efter genre ►"
+	});*/
+	page.type = "directory";
+	page.loading = false;
+});
+
+/*******************************************************************************
+ * // Page PREFIX:index:path:title index for given paths
+ * http://online.anidub.com/anime_tv/anime_ongoing/page/2/
+ ******************************************************************************/
+new page.Route(PREFIX + ":index:([^:]+):(.*)", function(page, path, title) {
+	var urlData, offset;
+
+	page.type = "directory";
+	page.loading = true;
+	page.metadata.title = title;
+
+	offset = 1;
+
+	function loader() {
+		p('loader start')
+		getTitles(BASE_URL + path + "page/" + offset + '/', 9, function(titleList) {
+			p('titleList at loader' + dump(titleList))
+			for (var i = 0; i < titleList.length; i++) {
+				page.appendItem(PREFIX + ":mediaInfo:" + titleList[i].url, "video", {
+					title: titleList[i].title,
+					year: parseInt(titleList[i].year, 10),
+					rating: parseInt(titleList[i].rating, 10),
+					genre: titleList[i].genre,
+					description: titleList[i].description ? titleList[i].description : titleList[i].title,
+					icon: titleList[i].icon
 				});
+			}
+			urlData = http.request(BASE_URL + path + "page/" + offset + '/', {
+				method: 'GET',
+				noFail: true
+			}) //need for nnext.*href.*title=.Вперед
 
+			if (/nnext.*href.*title=.Вперед/.test(urlData) && urlData.statuscode === 200) { //urlData.statuscode === 200 regExpExec('(<a href="http://online\\.anidub\\.com/[\\s\\S]+?/page/\d+/)', 'g', urlData)[1] !== "") {
+				offset++;
+				page.haveMore = true;
+				p("we have next page set page.haveMore to true");
+				p('next page will be:')
+				p(BASE_URL + path + "page/" + offset + '/')
+			} else {
+				page.haveMore = false;
+				p("we HAS NO next page set page.haveMore to false");
+				p("last page was")
+				p(BASE_URL + path + "page/" + offset + '/')
+				//p(page.haveMore)
+				return;
 			}
 
-		}
+		});
+		p('loader stop')
+		return page.haveMore;
+	}
+	if (loader())
+		page.paginator = loader;
+	page.loading = false;
 
-		if (url.indexOf('player.adcdn.tv') !== -1) {
-			//url = url.replace('embed', 'i')
-			v = http.request(url, {
-				method: 'GET',
-				headers: {
-					'Referer': BASE_URL
+});
+/*******************************************************************************
+ * // Page PREFIX:mediaInfo
+ ******************************************************************************/
+new page.Route(PREFIX + ":mediaInfo:(.*)", function(page, path) {
+	var titleInfo = {};
+	page.metadata.logo = Plugin.path + "logo.png";
+	page.loading = true;
+	urlData = http.request(BASE_URL + path, {
+		method: 'GET',
+		noFail: true,
+		debug: service.debug
+	});
+
+	var dom = html.parse(urlData);
+	page.metadata.title = dom.root.getElementByClassName('titlfull')[0].textContent.trim()
+	//var entries = dom.root.getElementByTagName("option");
+	//p(entries)
+	//	    	for (var i = 0; i< entries.length; i++)
+	//    	{
+	//		title = entries[i].textContent
+	//		url = entries[i].attributes.getNamedItem("value").value
+	//		
+	//		page.appendItem(PREFIX + ':play:' + encodeURIComponent(title) + ':' + encodeURIComponent(url), 'video', {
+	//			title: url.split('|')[1]+'-'+title,
+	//			icon: titleInfo.icon
+	//		});
+	//    	}
+	// Get the information part we need from the url with genre etc. This is
+	// done for both movies and series.
+	urlData = urlData.toString()
+	data = new RegExp('newstitle([\\s\\S]+?)newsfoot', 'g').exec(urlData)[1];
+
+	titleInfo = getTitleInfo(path, page);
+	player = urlData //regExpExec('<div class="players">([\\S\\s]+?)<div id="banner_post"', 'g', data)[1]
+	// vk players
+	if (/value=.*?oid=(-\d+&id=\d+)&hash=[a-f\d]+.*?.*?>(.*?)</.test(player)) {
+		page.appendItem("", "separator", {
+			title: 'Основной плеер VK'
+		});
+		regExp = /value=.*?oid=(-\d+&id=\d+)&hash=[a-f\d]+.*?.*?>(.*?)</g;
+		while (((listData = regExp.exec(player)) !== null)) {
+			page.appendItem(PREFIX + ':play:' + encodeURIComponent(listData[1]) + ':' + encodeURIComponent(listData[2]), 'video', {
+				title: '[VK]' + listData[2],
+				icon: titleInfo.icon
+			});
+		}
+	} else
+	if (/src='.*?oid=(-\d+&id=\d+)&hash=[a-f\d]+/.test(player)) {
+		page.appendItem("", "separator", {
+			title: 'Основной плеер VK_S'
+		});
+		regExp = /src='.*?oid=(-\d+&id=\d+)&hash=[a-f\d]+/g;
+		while (((listData = regExp.exec(player)) !== null)) {
+			page.appendItem(PREFIX + ':play:' + encodeURIComponent(listData[1]) + ':' + encodeURIComponent(titleInfo.title), 'video', {
+				title: '[VK_S]' + titleInfo.title,
+				icon: titleInfo.icon
+			});
+		}
+	}
+	//mw players 
+	if (/value=.(.*?video\/[a-f\d]+\/iframe).*?>(.*?)</.test(player)) {
+		page.appendItem("", "separator", {
+			title: 'Основной плеер MW'
+		});
+		regExp = /value=.(.*?video\/[a-f\d]+\/iframe).*?>(.*?)</g;
+		while (((listData = regExp.exec(player)) !== null)) {
+			page.appendItem(PREFIX + ':play:' + encodeURIComponent(listData[1]) + ':' + encodeURIComponent(listData[2]), 'video', {
+				title: '[MW]' + listData[2],
+				icon: titleInfo.icon
+			});
+		}
+	} else
+	if (/src='.(.*?video\/[a-f\d]+\/iframe)/.test(player)) {
+		page.appendItem("", "separator", {
+			title: 'Основной плеер MW_S'
+		});
+		regExp = /src='.*(.*?video\/[a-f\d]+\/iframe)/g;
+		while (((listData = regExp.exec(player)) !== null)) {
+			page.appendItem(PREFIX + ':play:' + encodeURIComponent(listData[1]) + ':' + encodeURIComponent(titleInfo.title), 'video', {
+				title: '[MW_S]' + titleInfo.title,
+				icon: titleInfo.icon
+			});
+		}
+	}
+	//anidub own player
+	if (/value="(http:\/\/player.adcdn.tv\/embed[^|]+).*?>([^<]+)/.test(player)) {
+		page.appendItem("", "separator", {
+			title: 'Anidub плеер'
+		});
+		regExp = /value=.(http:\/\/player.adcdn.tv\/embed[^|]+).*?>([^<]+)/g;
+		while (((listData = regExp.exec(player)) !== null)) {
+			page.appendItem(PREFIX + ':play:' + encodeURIComponent(listData[1]) + ':' + encodeURIComponent(listData[2]), 'video', {
+				title: listData[2],
+				icon: titleInfo.icon
+			});
+		}
+	} else
+	if (/src='.(http:\/\/player.adcdn.tv\/embed[^|]+).*?>([^<]+)/g.test(player)) {
+		page.appendItem("", "separator", {
+			title: 'Anidub плеер'
+		});
+		regExp = /src='.(http:\/\/player.adcdn.tv\/embed[^|]+).*?>([^<]+)/g;
+		while (((listData = regExp.exec(player)) !== null)) {
+			page.appendItem(PREFIX + ':play:' + encodeURIComponent(listData[1]) + ':' + encodeURIComponent(titleInfo.title), 'video', {
+				title: titleInfo.title,
+				icon: titleInfo.icon
+			});
+		}
+	}
+
+	page.type = "directory";
+	page.loading = false;
+});
+
+
+/*******************************************************************************
+ * //Page PREFIX:play
+ ******************************************************************************/
+new page.Route(PREFIX + ":play:([^:]+):(.*)", function(page, url, title) {
+	var canonicalUrl = PREFIX + ":play:" + url + ":" + title;
+	page.loading = true;
+	p(canonicalUrl)
+	title = decodeURIComponent(title);
+	url = decodeURIComponent(url);
+	//titleInfo = JSON.parse(titleInfo);
+	var videoparams = {
+		canonicalUrl: canonicalUrl,
+		no_fs_scan: true,
+		//title: data.eng_title,
+		title: title,
+		//year: data.year ? data.year : 0,
+		//season: data.season ? data.season : -1,
+		//episode: data.episode ? data.episode : -1,
+		sources: [{
+				url: []
+			}
+		],
+		subtitles: []
+	};
+	//vk.com
+	if (/-\d+&id=\d+/.test(url)) {
+		p(url)
+		page.metadata.title = 'VK' + title;
+		vars = http.request('http://vk.com/al_video.php', {
+			method: 'POST',
+			postdata: {
+				'act': 'show',
+				'al': 1,
+				'video': url.replace('&id=', '_')
+			}
+		}).toString();
+		p(vars)
+		vars = JSON.parse(vars.match(/var vars = (.*);/)[1])
+		p(vars)
+		if (vars.error) {
+			page.metadata.title = vars.error.error_msg;
+			popup.notify(vars.error.error_msg + "\nThis video has been removed from public access.", 3);
+		} else {
+			page.metadata.backgroundAlpha = 0.8;
+			p(vars.timeline_thumbs_jpg.split(','))
+			page.metadata.background = vars.timeline_thumbs_jpg.split(',')[0]
+			for (key in vars) {
+				if ("cache240" == key || "cache360" == key || "cache480" == key || "cache720" == key ||
+					"url240" == key || "url360" == key || "url480" == key || "url720" == key) {
+					videoparams.icon = 'http://static3.anidub.com/online/poster/ecc4f17f99.jpg'
+					videoparams.sources = [{
+							url: vars[key],
+							mimetype: "video/quicktime"
+
+						}
+					];
+					video = "videoparams:" + JSON.stringify(videoparams);
+					page.appendItem(video, "video", {
+						title: "[" + key.match(/\d+/g) + "]-" + title,
+						duration: vars.duration,
+						icon: vars.jpg
+					});
 				}
-			}).toString();
+			}
+		}
+	}
+	if (/http:\/\/.+?iframe/.test(url)) {
+		p('Open url:' + url.match(/http:\/\/.+?iframe/));
+		var hdcdn = url.match(/http:\/\/.+?iframe/).toString();
+		v = http.request(hdcdn, {
+			method: 'GET',
+			headers: {
+				'Referer': BASE_URL
+			}
+		}).toString();
+		p("source:" + v);
+		page.metadata.title = /player_osmf\('([^']+)/.exec(v)[1];
+		var postdata = {};
+		postdata = /post\('\/sessions\/create_session', \{([^\}]+)/.exec(v)[1];
+		p(postdata);
+		postdata = {
+			partner: /partner: (.*),/.exec(v)[1],
+			d_id: /d_id: (.*),/.exec(v)[1],
+			video_token: /video_token: '(.*)'/.exec(v)[1],
+			content_type: /content_type: '(.*)'/.exec(v)[1],
+			access_key: /access_key: '(.*)'/.exec(v)[1],
+			cd: 0
+		};
+		p(postdata);
+		var ContentData = Duktape.enc('base64', /(\d{10}\.[a-f\d]+)/.exec(v)[1])
+		json = JSON.parse(http.request(hdcdn.match(/http:\/\/.*?\//) + 'sessions/create_session', {
+			debug: true,
+			headers: {
+				'Referer': url,
+				'Host': 'moonwalk.cc',
+				'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0',
+				'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+				'Content-Data': ContentData,
+				'X-Requested-With': 'XMLHttpRequest',
+			},
+			postdata: postdata
+		}));
+
+		result_url = 'hls:' + json.manifest_m3u8;
+		videoparams.sources = [{
+				url: 'hls:' + json.manifest_m3u8
+			}
+		];
+		video = "videoparams:" + JSON.stringify(videoparams);
+		page.appendItem(video, "video", {
+			title: "[Auto]-" + title
+		});
+		var video_urls = http.request(json.manifest_m3u8).toString();
+		p(video_urls);
+
+		regExp = /RESOLUTION=([^,]+)[\s\S]+?(http.*)/g
+		while (((match = regExp.exec(video_urls)) !== null)) {
+			p(match.toString())
 			videoparams.sources = [{
-					url: 'hls:' + /file: '([^']+)/.exec(v)[1]
+					url: 'hls:' + match[2]
 				}
 			]
 			video = "videoparams:" + JSON.stringify(videoparams)
 			page.appendItem(video, "video", {
-				title: title,
-				icon: /image: '([^']+)/.exec(v)[1]
+				title: "[" + match[1] + "]-" + title
 			});
-
-			//code
 		}
-		page.appendItem("search:" + title.split('-')[0], "directory", {
-			title: 'Try Search for: ' + title
+
+	}
+	if (/player.adcdn.tv/.test(url)) {
+		//url = url.replace('embed', 'i')
+		v = http.request(url, {
+			method: 'GET',
+			headers: {
+				'Referer': BASE_URL
+			}
+		}).toString();
+		p(v)
+		videoparams.sources = [{
+				url: 'hls:' + /file: '([^']+)/.exec(v)[1]
+			}
+		]
+		video = "videoparams:" + JSON.stringify(videoparams)
+		page.appendItem(video, "video", {
+			title: title,
+			icon: (/image: '([^']+)/.test(v)[1] ? /image: '([^']+)/.exec(v)[1] : logo)
 		});
 
-		page.type = "directory";
-		page.contents = "contents";
-		page.metadata.logo = logo;
-		page.loading = false;
+		//code
+
+
+	}
+
+	page.appendItem("search:" + title.split('-')[0], "directory", {
+		title: 'Try Search for: ' + title
 	});
-	plugin.addSearcher(PREFIX + " - Videos", plugin.path + "logo.png", function(page, query) {
-		try {
-			showtime.trace("Search anidub Videos for: " + query);
-			var v = http.request(BASE_URL + '/index.php?do=search', {
-				debug: service.debug,
-				postdata: {
-					do :'search',
-					subaction: 'search',
-					story: query,
-					search_start: 1,
-					full_search: 1,
-					result_from: 1,
-					titleonly: 3,
-					searchuser: '',
-					replyless: 0,
-					replylimit: 0,
-					searchdate: 0,
-					beforeafter: 'after',
-					sortby: 'date',
-					resorder: 'desc',
-					showposts: 0
-				}
+	page.type = "directory";
+	page.contents = "contents";
+	page.metadata.logo = Plugin.path + "logo.png";
+	page.loading = false;
+});
+/*******************************************************************************
+ * //Page Searcher
+ ******************************************************************************/
+page.Searcher(PREFIX + " - Videos", Plugin.path + "logo.png", function(page, query) {
+	page.entries = 0;
+	page.type = "directory";
+	page.loading = true;
+
+	query = escape(query);
+	try {
+
+		concole.log("Search anidub Videos for: " + query);
+		var v = http.request('http://online.anidub.com/index.php?do=search', {
+			debug: service.debug,
+			postdata: {
+				do :'search',
+				subaction: 'search',
+				search_start: '1',
+				full_search: '1',
+				result_from: '1',
+				story: query,
+				titleonly: '3',
+				replyless: '0',
+				replylimit: '0',
+				searchdate: '0',
+				beforeafter: 'after',
+				sortby: 'date',
+				resorder: 'desc',
+				showposts: '0',
+				'catlist[]': '0'
+			}
+		});
+
+		var dom = html.parse(v);
+		p(v)
+		var entries = dom.root.getElementByClassName("title");
+		test = dom.root.getElementByClassName("title", "a")
+		p(test)
+		p(dump(entries))
+		print(entries.length)
+		for (var i = 0; i < entries.length; i++) {
+			title = entries[i].getElementByTagName('a')[0].textContent
+			href = entries[i].getElementByTagName('a')[0].attributes.getNamedItem('href').value
+			page.appendItem(PREFIX + ":mediaInfo:" + href.split(BASE_URL)[1], 'file', {
+				title: title,
+				icon: logo
 			});
-			var re = /<div class="title">[\S\s]+?"(http:\/\/online.anidub.com.+?)" >(.+?)<[\S\s]+?<img src="(.+?)"/g;
-			var m = re.execAll(v);
-			for (var i = 0; i < m.length; i++) {
-				p(m[i][1] + '\n' + m[i][2] + '\n' + m[i][3] + '\n');
-				page.appendItem(PREFIX + ":page:" + escape(m[i][2]) + ":" + escape(m[i][1]) + ":" + escape(m[i][3]), "video", {
-					title: new showtime.RichText(m[i][2]),
-					description: new showtime.RichText(m[i][2]),
-					icon: m[i][3]
-				});
-				page.entries = i;
-			}
-		} catch (err) {
-			showtime.trace('anidub - Ошибка поиска: ' + err);
-			e(err);
+			page.entries++
 		}
-	});
 
 
-	//
-	//extra functions
-	//
-
-	// Add to RegExp prototype
-	RegExp.prototype.execAll = function(str) {
-		var match = null
-		for (var matches = []; null !== (match = this.exec(str));) {
-			var matchArray = [],
-				i;
-			for (i in match) {
-				parseInt(i, 10) == i && matchArray.push(match[i]);
-			}
-			matches.push(matchArray);
-		}
-		if (this.exec(str) == null) return null
-		return matches;
-	};
-
-	function match(re, st) {
-		var v;
-		if (re.exec(st)) {
-			v = re.exec(st)[1];
-		} else v = null;
-		return v;
+	} catch (err) {
+		console.log('anidub - Ошибка поиска: ' + err);
+		p(err);
 	}
-
-	function trim(s) {
-		s = s.toString();
-		s = s.replace(/(\r\n|\n|\r)/gm, "");
-		s = s.replace(/(^\s*)|(\s*$)/gi, "");
-		s = s.replace(/[ ]{2,}/gi, " ");
-		return s;
-	}
-
-	function e(ex) {
-		t(ex);
-		t("Line #" + ex.lineNumber);
-	}
-
-	function t(message) {
-		showtime.trace(message, plugin.getDescriptor().id);
-	}
-
-	function p(message) {
-		if (service.debug == '1') {
-			print(message);
-			if (typeof(message) === 'object') print(dump(message))
-		}
-	}
-
-	function dump(arr, level) {
-		var dumped_text = "";
-		if (!level) level = 0;
-
-		//The padding given at the beginning of the line.
-		var level_padding = "";
-		for (var j = 0; j < level + 1; j++) level_padding += "    ";
-
-		if (typeof(arr) == 'object') { //Array/Hashes/Objects
-			for (var item in arr) {
-				var value = arr[item];
-
-				if (typeof(value) == 'object') { //If it is an array,
-					dumped_text += level_padding + "'" + item + "' ...\n";
-					dumped_text += dump(value, level + 1);
-				} else {
-					dumped_text += level_padding + "'" + item + "' => \"" + value + "\"\n";
-				}
-			}
-		} else { //Stings/Chars/Numbers etc.
-
-			dumped_text = arr;
-		}
-		return dumped_text;
-	}
-
-	function trace(msg) {
-		if (service.debug == '1') {
-			t(msg);
-			p(msg);
-		}
-	}
-})(this);
+	page.loading = false;
+});
