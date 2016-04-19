@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 2.1.3
+//ver 2.1.4
 // Import required modules.
 //var XML = require('showtime/xml');
 var page = require('showtime/page');
@@ -61,6 +61,7 @@ settings.createBool("debug", "Debug", false, function(v) {
 });;
 io.httpInspectorCreate("http.*anidub.com.*", function(req) {
   req.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36");
+  req.setHeader("Accept-Encoding", "gzip, deflate");  
 });
 
 io.httpInspectorCreate("http.*sibnet.ru.*", function(req) {
@@ -273,7 +274,7 @@ new page.Route(PREFIX + ":start", function (page) {
 //}
 */
     start_block(page, '/anime_tv/anime_ongoing/', 'Аниме Ongoing')
-    start_block(page, '/full/', 'Аниме FULL')
+    start_block(page, '/anime_tv/full/', 'Аниме FULL')
     start_block(page, '/anime_tv/', 'Аниме TV')
     start_block(page, '/anime_movie/', 'Аниме Фильмы')
     start_block(page, '/anime_ova/', 'Аниме OVA')
@@ -299,15 +300,12 @@ new page.Route(PREFIX + ":index:([^:]+):(.*)", function (page, path, title) {
     function loader() {
         setTimeout(function () {
             p('loader start')
+	  //  http://online.anidub.com/anime_tv/full/page/1/
             urlData = http.request(BASE_URL + path + "page/" + offset + '/', {
                 method: 'GET',
                 debug: service.debug,
                 noFail: true
             })
-            if (!/nnext.*href.*title=.Вперед/.test(urlData)) {
-                page.haveMore(false)
-                return
-            }
             getTitles(urlData, function (titleList) {
                 for (var i = 0; i < titleList.length; i++) {
                     item = titleList[i]
@@ -320,9 +318,21 @@ new page.Route(PREFIX + ":index:([^:]+):(.*)", function (page, path, title) {
                         icon: item.icon
                     });
                 }
+		p('zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz')
+		p(titleList.length)
                 offset++;
-                page.haveMore(true);
+//		p(!/nnext.*href.*title=.Вперед/.test(urlData))
+//		if (!/nnext.*href.*title=.Вперед/.test(urlData)) {
+//                page.haveMore(false)
+//                return
+//            }
+page.haveMore(/nnext.*href.*title=.Вперед/.test(urlData))
+                //page.haveMore(true);
             });
+//	    if (!/nnext.*href.*title=.Вперед/.test(urlData)) {
+//                page.haveMore(false)
+//                return
+//            }
             p('loader stop')
         }, 3000);
     }
