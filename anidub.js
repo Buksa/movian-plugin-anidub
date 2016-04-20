@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 2.1.4
+//ver 2.1.5
 // Import required modules.
 //var XML = require('showtime/xml');
 var page = require('showtime/page');
@@ -379,11 +379,8 @@ new page.Route(PREFIX + ":mediaInfo:(.*)", function (page, path) {
             if (/(.*?video\/[a-f\d]+\/iframe)/.test(url)) {
                 title = '[MW]-' + title
                 url = /(.*?video\/[a-f\d]+\/iframe)/.exec(url)[1]
-
-
-                //code
             }
-
+            if (/play.md/.test(url)) title = '[play.md]-' + title
 
 
             p(url)
@@ -428,6 +425,25 @@ new page.Route(PREFIX + ":play:([^:]+):(.*)", function (page, url, title) {
     };
 
 
+    if (/play.md/.test(url)) {
+        resp = http.request(url, {
+            method: 'GET',
+            noFollow: true,
+            debug: service.debug,
+        });
+	var dom = html.parse(resp);
+	dom.root.getElementByTagName("source").forEach(function (source, i) {
+                videoparams.sources = [{
+                        url: source.attributes.getNamedItem("src").value,
+                        mimetype: source.attributes.getNamedItem("type").value
+                    }];
+                    video = "videoparams:" + JSON.stringify(videoparams);
+                    page.appendItem(video, "video", {
+                        title: "[" + source.attributes.getNamedItem("data-resolution").value + "]-" + title,
+			icon: icon
+                    });
+        });
+    }
     if (/video.sibnet.ru/.test(url)) {
         resp = http.request(url.match(/http:[^|]+/), {
             method: 'GET',
