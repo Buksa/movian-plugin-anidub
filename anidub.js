@@ -1,7 +1,7 @@
 /*
  *  anidub  - Movian Plugin
  *
- *  Copyright (C) 2014-2015 Buksa
+ *  Copyright (C) 2014-2016 Buksa
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 2.1.5
+//ver 2.1.5a
 // Import required modules.
 //var XML = require('showtime/xml');
 var page = require('showtime/page');
@@ -367,14 +367,15 @@ new page.Route(PREFIX + ":mediaInfo:(.*)", function (page, path) {
         for (var i = 0; i < entries.length; i++) {
             title = entries[i].textContent.match(/\d+.серия.*/)
             url = entries[i].attributes.getNamedItem("value").value
+	    p(url)
             if (/sibnet/.test(url)) title = '[sibnet]-' + title
             if (/adcdn/.test(url)) {
                 title = '[adcdn]-' + title
                 url = url.match(/http:[^|]+/)
             }
-            if (/.*?oid=(.\d+&id=\d+)&hash=[a-f\d]+/.test(url)) {
+            if (/.*?(oid=.\d+&id=\d+&hash=[a-f\d]+)/.test(url)) {
                 title = '[vk]-' + title
-                url = /.*?oid=(.\d+&id=\d+)&hash=[a-f\d]+/.exec(url)[1]
+                url = /.*?(oid=.\d+&id=\d+&hash=[a-f\d]+)/.exec(url)[1]
             }
             if (/(.*?video\/[a-f\d]+\/iframe)/.test(url)) {
                 title = '[MW]-' + title
@@ -414,6 +415,7 @@ new page.Route(PREFIX + ":play:([^:]+):(.*)", function (page, url, title) {
         //titleInfo = JSON.parse(titleInfo);
     var videoparams = {
         canonicalUrl: canonicalUrl,
+	icon: icon,
         no_fs_scan: true, //title: data.eng_title,
         title: title, //year: data.year ? data.year : 0,
         //season: data.season ? data.season : -1,
@@ -485,18 +487,13 @@ new page.Route(PREFIX + ":play:([^:]+):(.*)", function (page, url, title) {
     if (/-\d+&id=\d+/.test(url)) {
         p(url)
         page.metadata.title = title;
-        //http://vk.com/video.php?act=a_flash_vars&vid=-100541044_171621957
-        vars = http.request('http://vk.com/video.php', {
+        vars = http.request('https://new.vk.com/video_ext.php?'+url, {
             method: 'GET',
+	    noFollow: true,
             debug: service.debug,
-            args: {
-                'act': 'a_flash_vars',
-                'vid': url.replace('&id=', '_')
-            }
         }).toString();
-        p(vars)
+        vars = vars.match(/var vars = (.*);/)[1]
         vars = JSON.parse(vars)
-        p(vars)
         if (vars.error) {
             page.metadata.title = vars.error.error_msg;
             popup.notify(vars.error.error_msg + "\nThis video has been removed from public access.", 3);
@@ -508,7 +505,7 @@ new page.Route(PREFIX + ":play:([^:]+):(.*)", function (page, url, title) {
             }
             for (key in vars) {
                 if ("cache240" == key || "cache360" == key || "cache480" == key || "cache720" == key || "url240" == key || "url360" == key || "url480" == key || "url720" == key) {
-                    videoparams.icon = 'http://static3.anidub.com/online/poster/ecc4f17f99.jpg'
+                    //videoparams.icon = 'http://static3.anidub.com/online/poster/ecc4f17f99.jpg'
                     videoparams.sources = [{
                         url: vars[key],
                         mimetype: "video/quicktime"
