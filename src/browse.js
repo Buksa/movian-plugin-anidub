@@ -154,45 +154,48 @@ function showPlayersFolder(page, pageHtml) {
             //html: console.log(pageHtml.text.toString())
     });
     //GET TRANSLATE FROM pageHtml
-    if ((players = pageHtml.dom.getElementByClassName("players"))) {
+    if ((player = pageHtml.dom.getElementByClassName("player")[0])) {
         // page.appendPassiveItem("separator", null, {
         //   title: "Варианты Players:"
         // });
         data.Player = [];
-        players[0].children.forEach(function(e, i) {
-            data.Player.push({
-                url: "http://" + (/\/\/(.*?[^"]+)/.exec(e.getElementByTagName("iframe")[0].attributes.getNamedItem("src").value) || [])[1],
-                title: (/\/\/(.*?\.\w[^\/]+)/.exec(e.getElementByTagName("iframe")[0].attributes.getNamedItem("src").value) || [])[1]
-            });
-            page.appendPassiveItem("separator", null, {
-                title: data.Player[i].title
-            });
-            // page.appendItem(PREFIX + ":moviepage:" + JSON.stringify(data), "directory", {
-            //   title: data.Player[i].title
-            //   //icon: data.cov
-            // });
-            if (e.getElementByTagName("option").length > 1) {
-                e.getElementByTagName("option").forEach(function(item) {
-                    page.appendItem(item.attributes.getNamedItem("value").value, "video", {
-                        title: item.textContent,
-                        description: data.description,
-                        icon: data.icon
-                    });
-                });
-            } else {
-                page.appendItem(data.Player[i].url, "video", {
-                    title: data.title.replace("02", "01"),
+        i = 0;
+        data.Player[0] = ({
+            url: "http://" + (/\/\/(.*?[^"]+)/.exec(player.getElementByTagName("iframe")[0].attributes.getNamedItem("src").value) || [])[1],
+            title: (/\/\/(.*?\.\w[^\/]+)/.exec(player.getElementByTagName("iframe")[0].attributes.getNamedItem("src").value) || [])[1]
+        });
+        page.appendPassiveItem("separator", null, {
+            title: data.Player[0].title
+        });
+        // page.appendItem(PREFIX + ":moviepage:" + JSON.stringify(data), "directory", {
+        //   title: data.Player[i].title
+        //   //icon: data.cov
+        // });
+
+        if (player.getElementByTagName("option").length > 1) {
+            player.getElementByTagName("option").forEach(function(item) {
+                url = item.attributes.getNamedItem("value").value
+                page.appendItem(url, "video", {
+                    title: item.textContent,
                     description: data.description,
                     icon: data.icon
                 });
-            }
-        });
+            });
+        } else {
+            page.appendItem(data.Player[0].url, "video", {
+                title: data.title.replace(/0\d+/, "01"),
+                description: data.description,
+                icon: data.icon
+            });
+        }
         log.p(data);
+        log.d(data);
         page.metadata.title = data.title;
     }
 }
 
 function anidub_page(page, pageHtml) {
+    log.p(anidub_page)
     data.title_en = data.title.split("[")[0].split("/")[1].trim() || data.title.split("/")[1].trim();
     trailer(page);
     //Show_R_U(page, pageHtml)
@@ -214,9 +217,9 @@ exports.moviepage = function(page, mdata) {
     page.metadata.logo = data.icon;
     //delaem zapros na stranicu
     api.call(page, data.url, null, function(pageHtml) {
-        if (pageHtml.dom.getElementByClassName("players")[0] !== undefined) {
+        if (pageHtml.dom.getElementByClassName("player")[0] !== undefined) {
             anidub_page(page, pageHtml);
-        }
+        } else console.error('##################### net plaera?')
     });
     page.loading = false;
 };

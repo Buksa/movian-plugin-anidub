@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 3.0.1
+//ver 3.0.4
 var plugin = JSON.parse(Plugin.manifest);
 var PREFIX = plugin.id;
 var BASE_URL = "http://online.anidub.com";
@@ -77,7 +77,7 @@ new page.Route("(http://player.adcdn.tv/embed/storage.*)", function(page, url) {
 new page.Route(PREFIX + ":sibnet:(.*)", function(page, path) {
     page.loading = true;
     page.type = "video";
-    var url = http.request("http://video.sibnet.ru" + path, {
+    var url = http.request("https://video.sibnet.ru" + path, {
         noFollow: true
     }).headers.Location;
     var videoParams = {
@@ -94,14 +94,14 @@ new page.Route(PREFIX + ":sibnet:(.*)", function(page, path) {
     log.p(videoParams);
     page.source = "videoparams:" + JSON.stringify(videoParams);
 });
-new page.Route("http://video.sibnet.ru/shell.php\\?videoid=(\\d+)", function(page, videoid) {
+new page.Route("(http.*?//video.sibnet.ru/shell.php\\?videoid=\\d+)", function(page, url) {
     page.loading = true;
-    var url = "http://video.sibnet.ru/shell.php?videoid=" + videoid;
+    //var url = "http://video.sibnet.ru/shell.php?videoid=" + videoid;
     var x = http.request(url, {
         headers: {
             "User-Agent": "Mozilla/5.0 (Linux; Android 4.4.2; Nexus 4 Build/KOT49H) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.114 Mobile Safari/537.36"
         },
-        debug: 1
+        debug: service.debug
     });
     items = eval((/player\.src\(([^)]+)/.exec(x) || [])[1]);
     items.forEach(function(e) {
@@ -110,8 +110,8 @@ new page.Route("http://video.sibnet.ru/shell.php\\?videoid=(\\d+)", function(pag
             icon: data.icon
         });
     });
-    page.appendItem("search:" + data.title, "directory", {
-        title: "найти " + data.title
+    page.appendItem("search:" + data.title.split("/")[0], "directory", {
+        title: "найти " + data.title.split("/")[0]
     });
     page.type = "directory";
     page.metadata.logo = data.icon;
@@ -120,7 +120,7 @@ new page.Route("http://video.sibnet.ru/shell.php\\?videoid=(\\d+)", function(pag
 });
 // Create the service (ie, icon on home screen)
 service.create(plugin.title, PREFIX + ":start", "video", true, LOGO);
-settings.globalSettings("settings", plugin.title, LOGO, plugin.synopsis);
+settings.globalSettings(plugin.id, plugin.title, LOGO, plugin.synopsis);
 settings.createInfo("info", LOGO, "Plugin developed by " + plugin.author + ". \n");
 settings.createDivider("Settings:");
 settings.createBool("tosaccepted", "Accepted TOS (available in opening the plugin)", false, function(v) {
@@ -158,8 +158,8 @@ new page.Route(PREFIX + ":search:(.*)", function(page, query) {
 page.Searcher(PREFIX + " - Result", LOGO, function(page, query) {
     page.metadata.icon = LOGO;
     browse.list(page, {
-        href: "/query/" + query,
-        title: PREFIX + " - " + query
+        href: "/index.php?do=search&subaction=search&search_start=1&full_search=1&result_from=1&story=" + query + "&titleonly=3&showposts=0",
+        title: query
     });
 });
 // Landing page
