@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 3.0.4
+//ver 3.0.5
 var plugin = JSON.parse(Plugin.manifest);
 var PREFIX = plugin.id;
 var BASE_URL = "http://online.anidub.com";
@@ -170,13 +170,13 @@ new page.Route(PREFIX + ":start", function(page) {
     page.appendItem(PREFIX + ":search:", "search", {
         title: "Search AniDub"
     });
-    page.appendItem(PREFIX + ":browse:/anime_tv/anime_ongoing:Аниме Ongoing", "directory", {
+    page.appendItem(PREFIX + ":browse:/anime/anime_ongoing:Аниме Ongoing", "directory", {
         title: "Аниме Ongoing"
     });
-    page.appendItem(PREFIX + ":browse:/anime_tv:Аниме сериалы", "directory", {
-        title: "Аниме сериалы"
+    page.appendItem(PREFIX + ":browse:/anime:Аниме сериалы", "directory", {
+        title: "Аниме сериалы+"
     });
-    page.appendItem(PREFIX + ":browse:/anime_tv/full:Законченные Anime сериалы", "directory", {
+    page.appendItem(PREFIX + ":browse:/anime/full:Законченные Anime сериалы", "directory", {
         title: "Законченные Anime сериалы"
     });
     page.appendItem(PREFIX + ":browse:/anime_movie:Аниме Фильмы", "directory", {
