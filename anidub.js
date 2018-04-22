@@ -19,7 +19,7 @@
 //ver 3.0.4
 var plugin = JSON.parse(Plugin.manifest);
 var PREFIX = plugin.id;
-var BASE_URL = "http://online.anidub.com";
+var BASE_URL = "https://online.anidub.com";
 var LOGO = Plugin.path + "logo.png";
 var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36";
 var page = require("showtime/page");
@@ -170,13 +170,13 @@ new page.Route(PREFIX + ":start", function(page) {
     page.appendItem(PREFIX + ":search:", "search", {
         title: "Search AniDub"
     });
-    page.appendItem(PREFIX + ":browse:/anime_tv/anime_ongoing:Аниме Ongoing", "directory", {
+    page.appendItem(PREFIX + ":browse:/anime/anime_ongoing:Аниме Ongoing", "directory", {
         title: "Аниме Ongoing"
     });
-    page.appendItem(PREFIX + ":browse:/anime_tv:Аниме сериалы", "directory", {
+    page.appendItem(PREFIX + ":browse:/anime:Аниме сериалы", "directory", {
         title: "Аниме сериалы"
     });
-    page.appendItem(PREFIX + ":browse:/anime_tv/full:Законченные Anime сериалы", "directory", {
+    page.appendItem(PREFIX + ":browse:/anime/full:Законченные Anime сериалы", "directory", {
         title: "Законченные Anime сериалы"
     });
     page.appendItem(PREFIX + ":browse:/anime_movie:Аниме Фильмы", "directory", {
