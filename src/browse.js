@@ -17,7 +17,7 @@ function ScrapeList(href, pageHtml) {
             returnValue[i].icon = icon.value || LOGO;
         });
         content.getElementByClassName("maincont").forEach(function(e, i) {
-            returnValue[i].description = e.children[4].textContent || "";
+           // returnValue[i].description = e.children[4].textContent || "";
         });
     }
     //endOfData = document.getElementsByClassName('navigation').length ? document.getElementsByClassName('pagesList')[0].children[document.getElementsByClassName('pagesList')[0].children.length - 2].nodeName !== 'A' : true
@@ -75,7 +75,7 @@ exports.list = function(page, params) {
     page.asyncPaginator = loader;
 };
 
-function trailer(page) {
+function trailer(page,link) {
     log.d({
         function: "trailer",
         data: data
@@ -84,67 +84,30 @@ function trailer(page) {
     //   title: "\u0422\u0440\u0435\u0439\u043b\u0435\u0440:"
     // });
     page.appendItem("youtube:search:" + data.title_en + " " + (data.year || ""), "directory", {
-        title: "\u043d\u0430\u0439\u0442\u0438 \u0442\u0440\u0435\u0439\u043b\u0435\u0440 \u043d\u0430 YouTube"
+        title: "\u043d\u0430\u0439\u0442\u0438 \u043d\u0430 YouTube"
     });
-}
-
-function Show_R_U(page, pageHtml) {
-    log.d({
-        function: "Show_R_U start",
-        data: data
-            //html: console.log(pageHtml.text.toString())
+    page.appendItem(link.replace('/embed/','/watch?v='), "directory", {
+        title: "Trailer YouTube"
     });
-    page.metadata.title = data.title;
-    if ((episode = pageHtml.dom.getElementById("episode")) && (season = pageHtml.dom.getElementById("episode"))) {
-        season = pageHtml.dom.getElementById("season");
-        data.season = season.children[season.children.length - 1].attributes.getNamedItem("value").value;
-        data.episode = episode.children[episode.children.length - 1].attributes.getNamedItem("value").value;
-        page.appendItem("", "separator", {
-            title: "Recently Updated:"
-        });
-        data.url = data.url + "?season=" + data.season + "&episode=" + data.episode;
-        page.appendItem(PREFIX + ":play:" + JSON.stringify(data), "tvepisode", {
-            episode: {
-                number: +data.episode
-            },
-            title: season.children[season.children.length - 1].textContent + " " + episode.children[episode.children.length - 1].textContent,
-            icon: "cover"
-        }).bindVideoMetadata({
-            title: data.title_en ? data.title_en : data.title,
-            season: +data.season,
-            episode: +data.episode
-        });
-    } else {
-        page.appendItem("", "separator", {
-            title: "Video:"
-        });
-        page.appendItem(PREFIX + ":play:" + JSON.stringify(data), "video", {
-            title: data.title,
-            icon: "cover"
-        }).bindVideoMetadata({
-            title: data.title_en ? data.title_en : data.title,
-            year: +data.year
-        });
-    }
-}
-
-function showSeasonFolder(page, pageHtml) {
-    //season = document.getElementById('season');
-    if ((season = pageHtml.dom.getElementById("season"))) {
-        log.d("count season: " + season.children.length);
-        page.appendPassiveItem("separator", null, {
-            title: "Seasons:"
-        });
-        for (var i = 0; i < season.children.length; i++) {
-            //log.d(urls.parse(data.url))
-            data.season = season.children[i].attributes.getNamedItem("value").value;
-            data.url = data.url.replace(/season=.*/, "season=" + data.season);
-            page.appendItem(PREFIX + ":SEASON:" + JSON.stringify(data), "directory", {
-                title: season.children[i].textContent,
-                icon: "cover"
-            });
+};
+function yohoho (title){
+    var responseText = http.request('https://4h0y.yohoho.cc/', {
+    debug: 1,
+    headers: {
+        // "origin": "http://yohoho.cc",
+        // "accept-encoding": "gzip, deflate, br",
+        // "accept-language": "en-US,en;q=0.9,ru;q=0.8",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36",
+        "content-type": "application/x-www-form-urlencoded",
+        "accept": "*/*",
+        "referer": "http://yohoho.cc/",
+        // "authority": "4h0y.yohoho.cc",
+    },
+    postdata: {title: title, player: 'moonwalk,hdgo,iframe,newvideo,kodik,allserials,trailer,torrent'}
         }
-    }
+    )
+    return returnValue = (JSON.parse(responseText.toString()))
+
 }
 
 function showPlayersFolder(page, pageHtml) {
@@ -196,10 +159,30 @@ function showPlayersFolder(page, pageHtml) {
 
 function anidub_page(page, pageHtml) {
     log.p(anidub_page)
+    data.title_ru = data.title.split('/')[0].trim();
     data.title_en = data.title.split("[")[0].split("/")[1].trim() || data.title.split("/")[1].trim();
-    trailer(page);
-    //Show_R_U(page, pageHtml)
-    //showSeasonFolder(page, pageHtml)
+    data.title_jp = data.title_en.split(":")[0].trim();
+    players = yohoho((data.title_jp || data.title_en || data.title_jp)+ " " + (data.year || ""));
+    log.p(players);
+    trailer(page,players.trailer.iframe);
+
+   // players.moonwalk.iframe -> HDRezka:moviepage: {DATA}
+   if (players.moonwalk.iframe) {
+       console.error(players.moonwalk.iframe);
+       data.url = players.moonwalk.iframe.replace('s://streamguard','://moonwalk');
+       data.title = (data.title_jp || data.title_en || data.title_jp);
+       page.appendItem('HDRezka:moviepage:'+JSON.stringify(data), "directory", {
+           title: '[yo]- '+data.title + " на moonwalk"
+       });
+    }
+    // // players.torrent.iframe
+    // if (players.torrent.iframe) {
+    //     data.title = (data.title_jp || data.title_en || data.title_jp);
+    //     page.appendItem('HDRezka:moviepage:'+JSON.stringify(data), "directory", {
+    //         title:'[yo]- '+ data.title + " на торентах"
+    //     });
+
+    // }
     showPlayersFolder(page, pageHtml);
 }
 // vyzov s url
