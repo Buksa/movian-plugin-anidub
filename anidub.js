@@ -16,7 +16,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-//ver 3.0.4
+//ver 3.1.3 01.09.19 fixed anidub player
+//ver 3.1.4 01.14.19 fixed players list
 var plugin = JSON.parse(Plugin.manifest);
 var PREFIX = plugin.id;
 var BASE_URL = "https://online.anidub.com";
@@ -51,10 +52,10 @@ tos += "plugin operation lead to or may lead to infringement or violation of the
 tos += "rights of the respective content copyright holders.\n\n";
 tos += "plugin is not licensed, approved or endorsed by any online resource\n ";
 tos += "proprietary. Do you accept this terms?";
-// io.httpInspectorCreate('http.*sibnet.ru.*', function (ctrl) {
-//   ctrl.setHeader('User-Agent', UA);
-//   ctrl.setHeader('Referer', 'http://video.sibnet.ru')
-// });
+io.httpInspectorCreate('http.*sibnet.ru.*', function (ctrl) {
+    ctrl.setHeader('User-Agent', UA);
+    ctrl.setHeader('Referer', 'http://video.sibnet.ru')
+});
 // io.httpInspectorCreate('.*adcdn.tv.*', function (ctrl) {
 //   ctrl.setHeader('User-Agent', UA);
 //   ctrl.setHeader('Referer', 'http://player.adcdn.tv/embed/storage4/2786/1//0JHQvtC10LLRi9C1INC60YPQutC%2B0LvQutC4IC0gMSDRgdC10YDQuNGPIE9uaQ%3D%3D/kvv')
@@ -75,14 +76,54 @@ new page.Route("(http://player.adcdn.tv/embed/storage.*)", function (page, url) 
 });
 ///////////////////////// player.adcdn.tv /////////////////////////
 
+/////////////////////////  /////////////////////////
+new page.Route("(http://get.kodik-storage.com/.*)", function (page, url) {
+    var url = http.request(url, {
+         noFollow: true
+     }).headers.Location;
+    var x = http.request(url);
+    console.log(x.toString().replace(/\.\/\d+.mp4/g, url.match(/.*\d+.mp4/)[0]));
+     var str = x.bytes.toString().replace(/\.\/\d+.mp4/g, url.match(/.*\d+.mp4/)[0]);
+     var str = Duktape.enc("base64", str);
+     page.redirect("hls:data:application/x-mpegURL;base64," + str);
+});
+
+///////////////////////// anime.anidub.com/player /////////////////////////
+new page.Route(".*(anime.anidub.com/player/index.php.*)", function (page, url) {
+    page.loading = true;
+    page.type = "video";
+    var x = http.request('http://'+url,
+        {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36",
+                "Referer": "https://online.anidub.com/",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+            }
+        });
+    log.d(x.toString());    
+    var url = /hlsp.loadSource\('([^']+)/.exec(x)[1];
+    var videoParams = {
+        title: data.title,
+        icon: data.icon,
+        canonicalUrl: url,
+        sources: [{
+            url: url,
+            mimetype: 'application/x-mpegURL',
+        }],
+        no_subtitle_scan: true,
+        subtitles: []
+    };
+    page.source = "videoparams:" + JSON.stringify(videoParams);
+});
+///////////////////////// anime.anidub.com/player /////////////////////////
+
 //https://www.stormo.tv/anime/10417/1/1.mp4|
-new page.Route("(http.*?www.stormo.tv/anime/.*)", function (page, url) {
+new page.Route("(http.*?www.stormo.tv/embed/.*)", function (page, url) {
     page.loading = true;
     page.type = "video";
 
     var x = http.request(url.split('|')[0]);
-    console.log(x.toString())
-    var url = /file: '([^']+)/.exec(x)[1];
+    var url = /file:"\[HD\]([^,]+)/.exec(x)[1];
     var videoParams = {
         title: data.title,
         icon: data.icon,
@@ -104,6 +145,10 @@ new page.Route(PREFIX + ":sibnet:(.*)", function (page, path) {
     page.loading = true;
     page.type = "video";
     var url = http.request("https://video.sibnet.ru" + path, {
+        headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36",
+            //"Referer": "https://video.sibnet.ru/"shell.php?videoid=3464674
+        },
         noFollow: true
     }).headers.Location;
     var videoParams = {
