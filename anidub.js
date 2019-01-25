@@ -18,7 +18,8 @@
  */
 //ver 3.1.3 01.09.19 fixed anidub player
 //ver 3.1.4 01.14.19 fixed players list
-//ver 3.1.5 01.16.19 fixed anidub player 
+//ver 3.1.5 01.16.19 fixed anidub player
+//ver 3.1.6 01.24.19 fixed anidub player
 var plugin = JSON.parse(Plugin.manifest);
 var PREFIX = plugin.id;
 var BASE_URL = "https://online.anidub.com";
@@ -59,11 +60,11 @@ io.httpInspectorCreate('http.*sibnet.ru.*', function(ctrl) {
 });
 io.httpInspectorCreate('https://cdn.*\.anivid.tk/.*', function(ctrl) {
   ctrl.setHeader('User-Agent', UA);
-  ctrl.setHeader('Referer', 'https://anime.anidub.com/player/index.php')
+ // ctrl.setHeader('Referer', 'https://anime.anidub.com/')
 });
-io.httpInspectorCreate('https://anime.anidub.com/player/.*', function(ctrl) {
+io.httpInspectorCreate('http.*anime.anidub.com/player/.*', function(ctrl) {
   ctrl.setHeader('User-Agent', UA);
-  ctrl.setHeader('Referer', 'https://anime.anidub.com/player/index.php')
+  ctrl.setHeader('Referer', 'https://anime.anidub.com/')
 });
 var page = require("showtime/page");
 var http = require("showtime/http");
@@ -104,7 +105,9 @@ new page.Route(".*(anime.anidub.com/player/index.php.*)", function(page, url) {
     }
   }).toString();
   log.d(x);
+  //https://anime.anidub.com/player/video.php?vid=/s1/10629/1/1.mp4
   var url = /<source src="([^"]+)/.exec(x)[1];
+  url = 'https://anime.anidub.com/player/'+url;
   log.d(url);
   var videoParams = {
     title: data.title,
