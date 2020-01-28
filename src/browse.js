@@ -1,3 +1,4 @@
+var popup = require('showtime/popup');
 data = {};
 
 function ScrapeList(href, pageHtml) {
@@ -5,17 +6,17 @@ function ScrapeList(href, pageHtml) {
 	//content = document.getElementById("dle-content");
 	content = pageHtml.dom.getElementById('dle-content');
 	if (content) {
-		content.getElementByClassName('title').forEach(function(e) {
+		content.getElementByClassName('title').forEach(function (e) {
 			returnValue.push({
 				url: e.getElementByTagName('a')[0].attributes.getNamedItem('href').value,
 				title: e.getElementByTagName('a')[0].textContent
 			});
 		});
-		content.getElementByClassName('poster_img').forEach(function(e, i) {
+		content.getElementByClassName('poster_img').forEach(function (e, i) {
 			var icon = e.getElementByTagName('img')[0].attributes.getNamedItem('data-original') || e.getElementByTagName('img')[0].attributes.getNamedItem('src');
 			returnValue[i].icon = icon.value || LOGO;
 		});
-		content.getElementByClassName('maincont').forEach(function(e, i) {
+		content.getElementByClassName('maincont').forEach(function (e, i) {
 			// returnValue[i].description = e.children[4].textContent || "";
 		});
 	}
@@ -42,7 +43,7 @@ function populateItemsFromList(page, list) {
 		page.entries++;
 	}
 }
-exports.list = function(page, params) {
+exports.list = function (page, params) {
 	page.loading = true;
 	page.metadata.logo = LOGO;
 	page.metadata.title = params.title;
@@ -61,7 +62,7 @@ exports.list = function(page, params) {
 		});
 		url = params.page ? params.href + params.page : params.href + '/';
 		log.d('url=' + url); //http://getmovie.cc/serials-anime/page/2/
-		api.call(page, BASE_URL + url, null, function(pageHtml) {
+		api.call(page, BASE_URL + url, null, function (pageHtml) {
 			list = ScrapeList(url, pageHtml);
 			populateItemsFromList(page, list);
 			nextPage++;
@@ -89,9 +90,10 @@ function trailer(page, link) {
 	});
 }
 
+
 function yohoho(title) {
 	try {
-		var responseText = http.request('https://4h0y.yohoho.cc/', {
+		var responseText = http.request('https://ahoy.yohoho.cc/', {
 			debug: 1,
 			headers: {
 				// "origin": "http://yohoho.cc",
@@ -105,13 +107,13 @@ function yohoho(title) {
 			},
 			postdata: {
 				title: title,
-				player: 'moonwalk,hdgo,iframe,newvideo,kodik,allserials,trailer,torrent'
+				player: 'moonwalk,hdgo,iframe,newvideo,kodik,allserials,trailer,torrent,videocdn'
 			}
 		});
 		return (returnValue = JSON.parse(responseText.toString()));
 	} catch (error) {
-		showtime.notify("got error:" + error, 3);
-		
+		popup.notify("got error:" + error, 10);
+
 	}
 }
 
@@ -125,17 +127,17 @@ function showPlayersFolder(page, pageHtml) {
 		});
 		data.Player = [];
 		i = 0;
-		
+
 		//regex = /(((<option.*?http(s)?:|<iframe.*?src=")\/\/(www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b))([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/gi;
 		//regex = /<div class="players">([\s\S]+?)banner_post2/;
 		regex = /<div class="players">([\s\S]+?)class="tags"/gm;
 		((pl = regex.exec(pageHtml.text.toString())) !== null);
 		log.d(pl);
 		//regex = /(<option.*?http(s)?:|<iframe.*?src=")(\/\/(www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/gm;
-        // regex = /<iframe.*?(\/\/(www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g
-        //regex = /.prop\('name','((http(s)?:\/\/(www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b))([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/gi
-        regex = /(selected.*?http(s)?:|<iframe.*?src=")(\/\/(www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g
-        
+		// regex = /<iframe.*?(\/\/(www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g
+		//regex = /.prop\('name','((http(s)?:\/\/(www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b))([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/gi
+		regex = /(selected.*?http(s)?:|<iframe.*?src=")(\/\/(www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g
+
 		while ((m = regex.exec(pl[0])) !== null) {
 			// This is necessary to avoid infinite loops with zero-width matches
 			if (m.index === regex.lastIndex) {
@@ -148,12 +150,12 @@ function showPlayersFolder(page, pageHtml) {
 			i++;
 		}
 		if ((player = pageHtml.dom.getElementByClassName('player')[0])) {
-			pageHtml.dom.getElementByClassName('players')[0].children.forEach(function(players, i) {
+			pageHtml.dom.getElementByClassName('players')[0].children.forEach(function (players, i) {
 				page.appendPassiveItem('separator', null, {
 					title: data.Player[i].title
 				});
 				if (players.getElementByTagName('option').length > 1) {
-					players.getElementByTagName('option').forEach(function(item) {
+					players.getElementByTagName('option').forEach(function (item) {
 						url = item.attributes.getNamedItem('value').value;
 						page.appendItem(url, 'video', {
 							title: item.textContent,
@@ -172,9 +174,11 @@ function showPlayersFolder(page, pageHtml) {
 			page.metadata.title = data.title;
 		}
 		log.d(data);
-    } catch (err) { log.e(err);
+	} catch (err) {
+		log.e(err);
 		console.log("Line #" + err.lineNumber);
-		console.log(err.stack); }
+		console.log(err.stack);
+	}
 }
 
 function anidub_page(page, pageHtml) {
@@ -184,30 +188,32 @@ function anidub_page(page, pageHtml) {
 	data.title_ru = data.title.split('/')[0].split('[')[0];
 	data.title_en = data.title.split('/')[1].split('[')[0];
 	data.title_jp = data.title_en.trim();
-	players = yohoho((data.title_jp.trim() || data.title_en.trim() || data.title_jp.trim()) + ' ' + (data.year || ''));
-	log.p(players);
-	trailer(page, players.trailer.iframe);
-	// players.moonwalk.iframe -> HDRezka:moviepage: {DATA}
-	if (players.moonwalk.iframe) {
-		console.error(players.moonwalk.iframe);
-		data.url = players.moonwalk.iframe.replace('s://streamguard', '://moonwalk');
-		data.title = data.title_jp || data.title_en || data.title_jp;
-		page.appendItem('HDRezka:moviepage:' + JSON.stringify(data), 'directory', {
-			title: '[yo]- ' + data.title + ' на moonwalk'
-		});
-	}
-	// players.torrent.iframe
-	// if (players.torrent.iframe) {
-	//     data.title = (data.title_jp || data.title_en || data.title_jp);
-	//     page.appendItem('HDRezka:moviepage:'+JSON.stringify(data), "directory", {
-	//         title:'[yo]- '+ data.title + " на торентах"
-	//     });
+	// players = yohoho((data.title_jp.trim() || data.title_en.trim() || data.title_jp.trim()) + ' ' + (data.year || ''));
+	// log.p(players);
+	// if (players) {
+	// 	if (players.trailer) trailer(page, players.trailer.iframe);
+	// 	// players.moonwalk.iframe -> HDRezka:moviepage: {DATA}
+	// 	if (players.moonwalk && players.moonwalk.iframe) {
+	// 		console.error(players.moonwalk.iframe);
+	// 		data.url = players.moonwalk.iframe.replace('s://streamguard', '://moonwalk');
+	// 		data.title = data.title_jp || data.title_en || data.title_jp;
+	// 		page.appendItem('HDRezka:moviepage:' + JSON.stringify(data), 'directory', {
+	// 			title: '[yo]- ' + data.title + ' на moonwalk'
+	// 		});
+	// 	}
+	// 	//players.torrent.iframe
+	// 	// if (players.torrent.iframe) {
+	// 	// 	data.title = (data.title_jp || data.title_en || data.title_jp);
+	// 	// 	page.appendItem('HDRezka:moviepage:' + JSON.stringify(data), "directory", {
+	// 	// 		title: '[yo]- ' + data.title + " на торентах"
+	// 	// 	});
+	// 	// }
 	// }
 	showPlayersFolder(page, pageHtml);
 }
 // vyzov s url
 // PREFIX:moviepage:url
-exports.moviepage = function(page, mdata) {
+exports.moviepage = function (page, mdata) {
 	page.metadata.title = mdata.title;
 	page.metadata.logo = data.icon;
 	page.loading = true;
@@ -219,7 +225,7 @@ exports.moviepage = function(page, mdata) {
 	});
 	page.metadata.logo = data.icon;
 	//delaem zapros na stranicu
-	api.call(page, data.url, null, function(pageHtml) {
+	api.call(page, data.url, null, function (pageHtml) {
 		if (pageHtml.dom.getElementByClassName('player')[0] !== undefined) {
 			anidub_page(page, pageHtml);
 		} else console.error('##################### net plaera?');

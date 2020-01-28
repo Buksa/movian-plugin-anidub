@@ -20,21 +20,22 @@
 //ver 3.1.4 01.14.19 fixed players list
 //ver 3.1.5 01.16.19 fixed anidub player
 //ver 3.1.6 01.24.19 fixed anidub player
+//ver 3.1.7 06.24.19 
 var plugin = JSON.parse(Plugin.manifest);
 var PREFIX = plugin.id;
 var BASE_URL = "https://online.anidub.com";
 var LOGO = Plugin.path + "logo.png";
 var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36";
-var page = require("showtime/page");
-var service = require("showtime/service");
-var settings = require("showtime/settings");
+var page = require("movian/page");
+var service = require("movian/service");
+var settings = require("movian/settings");
 var io = require("native/io");
-var prop = require("showtime/prop");
+var prop = require("movian/prop");
 var log = require("./src/log");
 var browse = require("./src/browse");
 var api = require("./src/api");
-var http = require("showtime/http");
-var html = require("showtime/html");
+var http = require("movian/http");
+var html = require("movian/html");
 var urls = require("url");
 var result = "",
   referer = BASE_URL,
@@ -54,22 +55,34 @@ tos += "plugin operation lead to or may lead to infringement or violation of the
 tos += "rights of the respective content copyright holders.\n\n";
 tos += "plugin is not licensed, approved or endorsed by any online resource\n ";
 tos += "proprietary. Do you accept this terms?";
-io.httpInspectorCreate('http.*sibnet.ru.*', function(ctrl) {
+io.httpInspectorCreate('http.*sibnet.ru.*', function (ctrl) {
   ctrl.setHeader('User-Agent', UA);
   ctrl.setHeader('Referer', 'http://video.sibnet.ru')
 });
-io.httpInspectorCreate('https://cdn.*\.anivid.tk/.*', function(ctrl) {
+io.httpInspectorCreate('http.*anivid.tk/.*', function (ctrl) {
   ctrl.setHeader('User-Agent', UA);
- // ctrl.setHeader('Referer', 'https://anime.anidub.com/')
+  // ctrl.setHeader('Referer', 'https://anime.anidub.com/')
 });
-io.httpInspectorCreate('http.*anime.anidub.com/player/.*', function(ctrl) {
+//online.anidub.com
+//online/player/
+io.httpInspectorCreate('http.*anidub.*/player/.*', function (ctrl) {
   ctrl.setHeader('User-Agent', UA);
-  ctrl.setHeader('Referer', 'https://anime.anidub.com/')
+  ctrl.setHeader('Referer', 'https://online.anidub.com/')
 });
-var page = require("showtime/page");
-var http = require("showtime/http");
+//anivids.link
+io.httpInspectorCreate('http.*anivids.link.*', function (ctrl) {
+  ctrl.setHeader('User-Agent', UA);
+  //ctrl.setHeader('Referer', 'https://online.anidub.com/')
+});
+// https://myanime.online/player/
+io.httpInspectorCreate('http.*myanime.online/player/.*', function (ctrl) {
+  ctrl.setHeader('User-Agent', UA);
+  //ctrl.setHeader('Referer', 'https://online.anidub.com/')
+});
+var page = require("movian/page");
+var http = require("movian/http");
 ///////////////////////// player.adcdn.tv /////////////////////////
-new page.Route("(http://player.adcdn.tv/embed/storage.*)", function(page, url) {
+new page.Route("(http://player.adcdn.tv/embed/storage.*)", function (page, url) {
   var x = http.request(url);
   var url = /file: '([^']+)/.exec(x)[1];
   var url = http.request(url, {
@@ -82,7 +95,7 @@ new page.Route("(http://player.adcdn.tv/embed/storage.*)", function(page, url) {
 });
 ///////////////////////// player.adcdn.tv /////////////////////////
 /////////////////////////  /////////////////////////
-new page.Route("(http://get.kodik-storage.com/.*)", function(page, url) {
+new page.Route("(http://get.kodik-storage.com/.*)", function (page, url) {
   var url = http.request(url, {
     noFollow: true
   }).headers.Location;
@@ -93,7 +106,8 @@ new page.Route("(http://get.kodik-storage.com/.*)", function(page, url) {
   page.redirect("hls:data:application/x-mpegURL;base64," + str);
 });
 ///////////////////////// anime.anidub.com/player /////////////////////////
-new page.Route(".*(anime.anidub.com/player/index.php.*)", function(page, url) {
+//https://online.anidub.com/player/
+new page.Route(".*(online.anidub.com/player/index.php.*)", function (page, url) {
   var canonicalUrl = url;
   page.loading = true;
   page.type = "video";
@@ -106,8 +120,10 @@ new page.Route(".*(anime.anidub.com/player/index.php.*)", function(page, url) {
   }).toString();
   log.d(x);
   //https://anime.anidub.com/player/video.php?vid=/s1/10629/1/1.mp4
-  var url = /<source src="([^"]+)/.exec(x)[1];
-  url = 'https://anime.anidub.com/player/'+url;
+  // var source = 'video.php?vid=/s1/10727/1/1.mp4&id=-1';
+  var url = /<source src='([^']+)/.exec(x)[1];
+//https://online.anidub.com/player/video.php?vid=/s1/11013/6/2.mp4&id=-1
+  url = 'https://online.anidub.com/player/' + url;
   log.d(url);
   var videoParams = {
     title: data.title,
@@ -116,7 +132,7 @@ new page.Route(".*(anime.anidub.com/player/index.php.*)", function(page, url) {
     sources: [{
       url: 'hls:' + url,
       mimetype: 'application/x-mpegURL',
-        }],
+    }],
     no_subtitle_scan: true,
     subtitles: []
   };
@@ -124,26 +140,47 @@ new page.Route(".*(anime.anidub.com/player/index.php.*)", function(page, url) {
 });
 ///////////////////////// anime.anidub.com/player /////////////////////////
 //https://www.stormo.tv/anime/10417/1/1.mp4|
-new page.Route("(http.*?www.stormo.tv/embed/.*)", function(page, url) {
+new page.Route("(http.*?stormo.tv/embed/.*)", function (page, url) {
   page.loading = true;
   page.type = "video";
-  var x = http.request(url.split('|')[0]);
-  var url = /file:"\[HD\]([^,]+)/.exec(x)[1];
-  var videoParams = {
-    title: data.title,
-    icon: data.icon,
-    canonicalUrl: url,
-    sources: [{
-      url: url,
-      mimetype: 'video/mp4',
-        }],
-    no_subtitle_scan: true,
-    subtitles: []
-  };
-  page.source = "videoparams:" + JSON.stringify(videoParams);
+  var x = http.request(url.split('|')[0]).toString();
+  var regex = /(\[.*?\])(.*?get_file.*?mp4\/)/gm;
+  var m;
+
+  while ((m = regex.exec(x)) !== null) {
+    // This is necessary to avoid infinite loops with zero-width matches
+    if (m.index === regex.lastIndex) {
+      regex.lastIndex++;
+    }
+    page.appendItem(m[2], "video", {
+      title: m[1] + " " ,
+      icon: data.icon
+    });
+    //     // The result can be accessed through the `m`-variable.
+    //     m.forEach((match, groupIndex) => {
+    //         console.log(`Found match, group ${groupIndex}: ${match}`);
+    //     });
+  }
+  // var url = /file:"\[HD\]([^,]+)/.exec(x)[1];
+  // var videoParams = {
+  //   title: data.title,
+  //   icon: data.icon,
+  //   canonicalUrl: url,
+  //   sources: [{
+  //     url: url,
+  //     mimetype: 'video/mp4',
+  //   }],
+  //   no_subtitle_scan: true,
+  //   subtitles: []
+  // };
+  // page.source = "videoparams:" + JSON.stringify(videoParams);
+  page.type = "directory";
+  page.metadata.logo = data.icon;
+  page.metadata.title = data.title;
+  page.loading = false;
 });
 ///////////////////////// video.sibnet.ru /////////////////////////
-new page.Route(PREFIX + ":sibnet:(.*)", function(page, path) {
+new page.Route(PREFIX + ":sibnet:(.*)", function (page, path) {
   page.loading = true;
   page.type = "video";
   var url = http.request("https://video.sibnet.ru" + path, {
@@ -160,14 +197,14 @@ new page.Route(PREFIX + ":sibnet:(.*)", function(page, path) {
     sources: [{
       url: "http:" + url
       //  mimetype: type,
-        }],
+    }],
     no_subtitle_scan: true,
     subtitles: []
   };
   log.p(videoParams);
   page.source = "videoparams:" + JSON.stringify(videoParams);
 });
-new page.Route("(http.*?//video.sibnet.ru/shell.php\\?videoid=\\d+)", function(page, url) {
+new page.Route("(http.*?//video.sibnet.ru/shell.php\\?videoid=\\d+)", function (page, url) {
   page.loading = true;
   //var url = "http://video.sibnet.ru/shell.php?videoid=" + videoid;
   var x = http.request(url, {
@@ -177,7 +214,7 @@ new page.Route("(http.*?//video.sibnet.ru/shell.php\\?videoid=\\d+)", function(p
     debug: service.debug
   });
   items = eval((/player\.src\(([^)]+)/.exec(x) || [])[1]);
-  items.forEach(function(e) {
+  items.forEach(function (e) {
     page.appendItem(PREFIX + ":sibnet:" + e.src, "video", {
       title: (/title: '([^']+)/.exec(x) || [])[1] + " " + e.type,
       icon: data.icon
@@ -197,27 +234,27 @@ service.create(plugin.title, PREFIX + ":start", "video", true, LOGO);
 settings.globalSettings(plugin.id, plugin.title, LOGO, plugin.synopsis);
 settings.createInfo("info", LOGO, "Plugin developed by " + plugin.author + ". \n");
 settings.createDivider("Settings:");
-settings.createBool("tosaccepted", "Accepted TOS (available in opening the plugin)", false, function(v) {
+settings.createBool("tosaccepted", "Accepted TOS (available in opening the plugin)", false, function (v) {
   service.tosaccepted = v;
 });
-settings.createBool("debug", "Debug", false, function(v) {
+settings.createBool("debug", "Debug", false, function (v) {
   service.debug = v;
 });
-settings.createBool("Show_META", "Show more info from thetvdb", true, function(v) {
+settings.createBool("Show_META", "Show more info from thetvdb", true, function (v) {
   service.tvdb = v;
 });
-new page.Route(PREFIX + ":browse:(.*):(.*)", function(page, href, title) {
+new page.Route(PREFIX + ":browse:(.*):(.*)", function (page, href, title) {
   browse.list(page, {
     href: href,
     title: title
   });
 });
 //
-new page.Route(PREFIX + ":moviepage:(.*)", function(page, data) {
+new page.Route(PREFIX + ":moviepage:(.*)", function (page, data) {
   browse.moviepage(page, data);
 });
 //
-new page.Route(PREFIX + ":search:(.*)", function(page, query) {
+new page.Route(PREFIX + ":search:(.*)", function (page, query) {
   page.metadata.icon = LOGO;
   page.metadata.title = "Search results for: " + query;
   //  page.type = 'directory';
@@ -229,7 +266,7 @@ new page.Route(PREFIX + ":search:(.*)", function(page, query) {
   });
 });
 //
-page.Searcher(PREFIX + " - Result", LOGO, function(page, query) {
+page.Searcher(PREFIX + " - Result", LOGO, function (page, query) {
   page.metadata.icon = LOGO;
   browse.list(page, {
     href: "/index.php?do=search&subaction=search&search_start=1&full_search=1&result_from=1&story=" + query + "&titleonly=3&showposts=0",
@@ -237,7 +274,7 @@ page.Searcher(PREFIX + " - Result", LOGO, function(page, query) {
   });
 });
 // Landing page
-new page.Route(PREFIX + ":start", function(page) {
+new page.Route(PREFIX + ":start", function (page) {
   page.type = "directory";
   page.metadata.title = PREFIX;
   page.metadata.icon = LOGO;
