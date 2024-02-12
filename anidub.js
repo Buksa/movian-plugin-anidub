@@ -24,9 +24,11 @@
 // ver 3.1.6 01.24.19 fixed anidub player
 // ver 3.1.7 06.24.19
 // ver 3.2.2 03.01.22 fixed anidub player aes req headers
+// ver 3.2.3 14.04.22 
+// ver 3.3.1 21.01.24
+// ver 3.4.1 11.02.24
 var plugin = JSON.parse(Plugin.manifest);
 var PREFIX = plugin.id;
-var BASE_URL = 'https://online.anidub.com';
 var LOGO = Plugin.path + 'logo.png';
 var UA = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0';
 
@@ -43,7 +45,6 @@ var html = require('movian/html');
 var urls = require('url');
 
 var result = '';
-var referer = BASE_URL;
 var data = {};
 
 var tos = 'The developer has no affiliation with the sites what so ever.\n';
@@ -62,6 +63,128 @@ tos += 'rights of the respective content copyright holders.\n\n';
 tos += 'plugin is not licensed, approved or endorsed by any online resource\n ';
 tos += 'proprietary. Do you accept this terms?';
 
+// Create the service (ie, icon on home screen)
+service.create(plugin.title, PREFIX + ':start', 'video', true, LOGO);
+settings.globalSettings(plugin.id, plugin.title, LOGO, plugin.synopsis);
+settings.createInfo('info', LOGO, 'Plugin developed by ' + plugin.author + '. \n');
+settings.createDivider('Settings:');
+settings.createBool('tosaccepted', 'Accepted TOS (available in opening the plugin)', false, function(v) {
+  service.tosaccepted = v;
+});
+settings.createString('domain', '\u0414\u043e\u043c\u0435\u043d', 'https://anidub.live/', function(v) {
+  service.domain = v;
+});
+settings.createBool('debug', 'Debug', false, function(v) {
+  service.debug = v;
+});
+settings.createBool('Show_META', 'Show more info from thetvdb', true, function(v) {
+  service.meta = v;
+});
+
+// require('movian/itemhook').create({
+//   title: "Search at kpID",
+//   itemtype: "video",
+//   handler: function (obj, nav) {
+//     var title = obj.metadata.title.toString();
+//     title = title.replace(/<.+?>/g, "").replace(/\[.+?\]/g, "");
+//     nav.openURL(PREFIX + ":search:" + title);
+//   }
+// });
+
+//  require('movian/itemhook').create({
+//   title: "Detailed info",
+//   itemtype: "video",
+//   handler: function(obj, nav) {
+//     // Serialize all metadata for the item into the URL
+//     // Wicked, but works just fine
+//     //output:[prop directory {"url", "type", "metadata", "playcount", "lastplayed", "restartpos", "canDelete", "options"}]
+//     print('print(obj)')
+//     print('print(obj) output: '+obj)
+//     //output:[prop directory {"url", "type", "metadata", "playcount", "lastplayed", "restartpos", "canDelete", "options", "toJSON"}]
+//     print('print(obj.url)')
+//     print('print(obj.url) output: '+obj.url)
+//     print('print(obj.type)')
+//     print('print(obj.type) output: '+obj.type)
+//     print('print(obj.metadata)')
+//     print('print(obj.metadata) output: '+obj.metadata)
+//     //print(obj.metadata) output: [prop directory {"title", "description", "icon", "rating", "duration", "loading", "source", "tagline", "genre", "icons", "backdrop", "backdrops", "year", "rating_count", "cast", "crew", "vtype", "thumbs", "episode", "season", "videostreams", "audiostreams"}]
+//     print('print(obj.metadata.title)')
+//     print('print(obj.metadata.title) output: '+obj.metadata.title)
+//     print("obj.metadata.title:"+obj.metadata.title)
+//     print("obj.metadata.description:"+obj.metadata.description)
+//     print("obj.metadata.icon:"+obj.metadata.icon)
+//     print("obj.metadata.rating:"+obj.metadata.rating)
+//     print("obj.metadata.duration:"+obj.metadata.duration)
+//     print("obj.metadata.loading:"+obj.metadata.loading)
+//     print("obj.metadata.source:"+obj.metadata.source)
+//     print("obj.metadata.tagline:"+obj.metadata.tagline)
+//     print("obj.metadata.genre:"+obj.metadata.genre)
+//     print("obj.metadata.icons:"+obj.metadata.icons)
+//     print("obj.metadata.backdrop:"+obj.metadata.backdrop)
+//     print("obj.metadata.backdrops:"+obj.metadata.backdrops)
+//     print("obj.metadata.year:"+obj.metadata.year)
+//     print("obj.metadata.rating_count:"+obj.metadata.rating_count)
+//     print("obj.metadata.cast:"+obj.metadata.cast)
+//     print("obj.metadata.crew:"+obj.metadata.crew)
+//     print("obj.metadata.vtype:"+obj.metadata.vtype)
+//     print("obj.metadata.thumbs:"+obj.metadata.thumbs)
+//     print("obj.metadata.episode:"+obj.metadata.episode)
+//     print("obj.metadata.season:"+obj.metadata.season)
+//     print("obj.metadata.videostreams:"+obj.metadata.videostreams)
+//     print("obj.metadata.audiostreams:"+obj.metadata.audiostreams)
+
+//     print(obj.metadata.cast[0])
+
+//     //output:[prop directory {"url", "type", "metadata", "playcount", "lastplayed", "restartpos", "canDelete", "options", "toJSON"}]
+//     // print(obj.url)
+//     // //output:anidub:moviepage:{"url":"https://anidub.live/anime_tv/11202-shutnica-takagi-sezon-ova-karakai-jouzu-no-takagi-san-ova.html","title":"Шутница Такаги OVA / Karakai Jouzu no Takagi-san OVA","icon":"https://anidub.live/uploads/posts/2023-05/1685206504_poster-shutnica-takagi_1-sezon.jpg"}
+//     //     //output: [prop directory {"url", "type", "metadata", "playcount", "lastplayed", "restartpos", "options", "canDelete"}]
+//     // print('url:'+obj.url)
+//     // //output: url:https://video.sibnet.ru/shell.php?videoid=4197599
+//     // print('type:'+obj.type)
+//     // //output: type:video
+//     // print('metadata:'+obj.metadata);
+//     // //output: metadata:[prop directory {"url", "type", "metadata", "playcount", "lastplayed", "restartpos", "canDelete", "options"}]
+//     // print('metadata:'+obj.metadata.url);
+
+//     page.metadata.info = obj.metadata.info;
+//     page.dump();
+//     nav.openURL(PREFIX + "detailedinfo:" + JSON.stringify(obj));
+//   }
+// });
+
+
+
+
+// var stringifyWithoutCircular = function(obj) {
+//   var seen = [];
+  
+//   var replacer = function(_, value) {
+//       if (typeof value === 'object' && value !== null) {
+//           if (seen.includes(value)) {
+//               return; // Пропустить циклическую ссылку
+//           }
+//           seen.push(value);
+//       }
+//       return value;
+//   };
+  
+//   return JSON.stringify(obj, replacer);
+// };
+
+// new page.Route(PREFIX + "detailedinfo:(.*)", function(page, jsonstr) {
+//   // Deserialize all metadata back into the page's metadata model
+//   page.metadata.info = JSON.parse(jsonstr);
+//   // Take a look!
+//   page.dump();
+
+//   // Load a special view
+//   page.metadata.glwview = plugin.path + "details.view";
+//   page.type = 'raw';
+
+//   page.loading = false;
+// });
+
 io.httpInspectorCreate('^.*\\/player\\/.*.php\\?vid=\\/.*', function(ctrl) {
   ctrl.setHeader('User-Agent', UA);
   ctrl.setHeader('Referer', ctrl.url);
@@ -79,14 +202,14 @@ io.httpInspectorCreate('http.*anivid.tk/.*', function(ctrl) {
 // online/player/
 io.httpInspectorCreate('http.*anidub.*/player/.*', function(ctrl) {
   ctrl.setHeader('User-Agent', UA);
-  ctrl.setHeader('Referer', 'https://online.anidub.com/');
+  ctrl.setHeader('Referer', BASE_URL);
 });
 // rusanime.ru
 io.httpInspectorCreate('http.*rusanime.ru/player/out.php.*', function(ctrl) {
-	ctrl.setHeader('User-Agent', 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0');
+	ctrl.setHeader('User-Agent', UA);
     ctrl.setHeader("accept-language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
     ctrl.setHeader("cache-control", "no-cache");
-    ctrl.setHeader("Referer", "https://online.anidub.com/");
+    ctrl.setHeader("Referer", BASE_URL);
 });
 // anivids.link
 io.httpInspectorCreate('http.*anivids.link.*', function(ctrl) {
@@ -101,18 +224,18 @@ io.httpInspectorCreate('http.*anivids.link.*', function(ctrl) {
   // ctrl.setHeader('sec-ch-ua-mobile', '?0');
   // ctrl.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.128 Safari/537.36');
   // ctrl.setHeader('Accept', '*/*');
-  ctrl.setHeader('Origin', 'https://online.anidub.com');
+  ctrl.setHeader('Origin', service.domain);
   // ctrl.setHeader('Sec-Fetch-Site', 'cross-site');
   // ctrl.setHeader('Sec-Fetch-Mode', 'cors');
   // ctrl.setHeader('Sec-Fetch-Dest', 'empty');
-  ctrl.setHeader('Referer', 'https://online.anidub.com/player/index.php?vid=/s4/11271/1/1.mp4&url=/anime/11427-megaloboks-tv-2-nomad-megalo-box-tv-2-01-iz-13.html&ses=ff&id=-1');
+  ctrl.setHeader('Referer', service.domain);
   // ctrl.setHeader('Accept-Language', 'ru,en-US;q=0.9,en;q=0.8,zh;q=0.7');
   ctrl.setHeader('User-Agent', 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0');
 });
 // https://myanime.online/player/
 io.httpInspectorCreate('http.*myanime.online/player/.*', function(ctrl) {
   ctrl.setHeader('User-Agent', UA);
-  ctrl.setHeader('Referer', 'https://online.anidub.com/player/index.php?vid=/s4/11271/1/1.mp4&url=/anime/11427-megaloboks-tv-2-nomad-megalo-box-tv-2-01-iz-13.html&ses=ff&id=-1');
+  ctrl.setHeader('Referer', ctrl.url);
 });
 
 // /////////////////////// player.adcdn.tv /////////////////////////
@@ -134,11 +257,18 @@ new page.Route('(http://get.kodik-storage.com/.*)', function(page, url) {
     noFollow: true,
   }).headers.Location;
   var x = http.request(url);
-  console.log(x.toString().replace(/\.\/\d+.mp4/g, url.match(/.*\d+.mp4/)[0]));
+  
   var str = x.bytes.toString().replace(/\.\/\d+.mp4/g, url.match(/.*\d+.mp4/)[0]);
   var str = Duktape.enc('base64', str);
   page.redirect('hls:data:application/x-mpegURL;base64,' + str);
 });
+
+new page.Route('(https://tr.anidub.com/.*html)', function(page, url) {
+  var url = http.request(url, {noFollow: true,});
+  url = 'https://tr.anidub.com'+ /href="(.*?download[^"]+)/.exec(url)[1]
+  page.redirect(url);
+});
+
 // /////////////////////// anime.anidub.com/player /////////////////////////
 // https://online.anidub.com/player/
 // player/index.php?vid=.*
@@ -167,12 +297,10 @@ new page.Route('^.*(\\/player\\/.*.php\\?vid=\\/.*)', function(page, url) {
   var canonicalUrl = url;
   page.loading = true;
   page.type = 'video';
-  console.error('####################11111111################################');
-  console.log('https://online.anidub.com' + url);
-  var x = http.request('https://online.anidub.com' + url, {
+  var x = http.request(BASE_URL + url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36',
-      'Referer': 'https://online.anidub.com' + url,
+      'Referer': BASE_URL + url,
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
     },
   }).toString();
@@ -183,8 +311,6 @@ new page.Route('^.*(\\/player\\/.*.php\\?vid=\\/.*)', function(page, url) {
   // https://online.anidub.com/player/video.php?vid=/s1/11013/6/2.mp4&id=-1
   source = BASE_URL + '/player/' + url;
   
-  console.error('####################2222222################################');
-  console.log(source);
   var x = http.request(source, {
     headers: {
       'User-Agent': UA,
@@ -205,7 +331,7 @@ new page.Route('^.*(\\/player\\/.*.php\\?vid=\\/.*)', function(page, url) {
   
   //print(x2);
 
-  console.error('####################22222################################');
+  
   var videoParams = {
    title: data.title,
    icon: data.icon,
@@ -286,7 +412,7 @@ new page.Route(PREFIX + ':sibnet:(.*)', function(page, path) {
   page.source = 'videoparams:' + JSON.stringify(videoParams);
 });
 new page.Route('(http.*?//video.sibnet.ru/shell.php\\?videoid=\\d+)', function(page, url) {
-  console.log(data);
+  
   page.loading = true;
   // var url = "http://video.sibnet.ru/shell.php?videoid=" + videoid;
   var x = http.request(url, {
@@ -295,11 +421,12 @@ new page.Route('(http.*?//video.sibnet.ru/shell.php\\?videoid=\\d+)', function(p
     },
     debug: service.debug,
   });
+  log.p(data)
   items = eval((/player\.src\(([^)]+)/.exec(x) || [])[1]);
   items.forEach(function(e) {
     page.appendItem(PREFIX + ':sibnet:' + e.src, 'video', {
       title: (/title: '([^']+)/.exec(x) || [])[1] + ' ' + e.type,
-      icon: data.icon,
+      icon: service.domain+data.icon,
     });
   });
   // if (data !== undefined) {
@@ -313,20 +440,7 @@ new page.Route('(http.*?//video.sibnet.ru/shell.php\\?videoid=\\d+)', function(p
   page.loading = false;
 });
 // /////////////////////// video.sibnet.ru /////////////////////////
-// Create the service (ie, icon on home screen)
-service.create(plugin.title, PREFIX + ':start', 'video', true, LOGO);
-settings.globalSettings(plugin.id, plugin.title, LOGO, plugin.synopsis);
-settings.createInfo('info', LOGO, 'Plugin developed by ' + plugin.author + '. \n');
-settings.createDivider('Settings:');
-settings.createBool('tosaccepted', 'Accepted TOS (available in opening the plugin)', false, function(v) {
-  service.tosaccepted = v;
-});
-settings.createBool('debug', 'Debug', false, function(v) {
-  service.debug = v;
-});
-settings.createBool('Show_META', 'Show more info from thetvdb', true, function(v) {
-  service.tvdb = v;
-});
+
 new page.Route(PREFIX + ':browse:(.*):(.*)', function(page, href, title) {
   browse.list(page, {
     href: href,
@@ -365,24 +479,33 @@ new page.Route(PREFIX + ':start', function(page) {
   page.appendItem(PREFIX + ':search:', 'search', {
     title: 'Search AniDub',
   });
-  page.appendItem(PREFIX + ':browse:/anime/anime_ongoing:Аниме Ongoing', 'directory', {
+    page.appendItem(PREFIX + ':browse:/anime_ongoing:Аниме Ongoing', 'directory', {
     title: 'Аниме Ongoing',
   });
-  page.appendItem(PREFIX + ':browse:/anime:Аниме сериалы', 'directory', {
-    title: 'Аниме сериалы',
+  //<a href="/anime_tv/">Аниме</a>
+  page.appendItem(PREFIX + ':browse:/anime_tv:Аниме', 'directory', {
+    title: 'Аниме',
   });
-  page.appendItem(PREFIX + ':browse:/anime/full:Законченные Anime сериалы', 'directory', {
-    title: 'Законченные Anime сериалы',
-  });
-  page.appendItem(PREFIX + ':browse:/anime_movie:Аниме Фильмы', 'directory', {
-    title: 'Аниме Фильмы',
-  });
-  page.appendItem(PREFIX + ':browse:/anime_ova:Аниме OVA', 'directory', {
-    title: 'Аниме OVA',
-  });
-  page.appendItem(PREFIX + ':browse:/dorama:Дорамы', 'directory', {
-    title: 'Дорамы',
-  });
+  // [... document.getElementsByClassName('hm-right fx-1')[1].children].forEach(element => {
+  //   href = element.getElementsByTagName('a')[0].textContent;
+  //   title = element.getElementsByTagName('a')[0].textContent;
+  //   console.log("page.appendItem(PREFIX + ':browse:"+ href + ":"+ title +"', 'directory', {title: '"+ title +"',});")
+  //     });
+
+  page.appendItem(PREFIX + ':browse:/anime_tv:Аниме TV', 'directory', {title: 'Аниме TV',});
+  page.appendItem(PREFIX + ':browse:/anime_movie:Аниме Фильмы', 'directory', {title: 'Аниме Фильмы',});
+  page.appendItem(PREFIX + ':browse:/anime_ova:Аниме OVA', 'directory', {title: 'Аниме OVA',});
+  page.appendItem(PREFIX + ':browse:/anime_ona:Аниме ONA', 'directory', {title: 'Аниме ONA',});
+  page.appendItem(PREFIX + ':browse:/japan_dorama:Японские Сериалы и Фильмы', 'directory', {title: 'Японские Сериалы и Фильмы',});
+  page.appendItem(PREFIX + ':browse:/korea_dorama:Корейские Сериалы и Фильмы', 'directory', {title: 'Корейские Сериалы и Фильмы',});
+  page.appendItem(PREFIX + ':browse:/china_dorama:Китайские Сериалы и Фильмы', 'directory', {title: 'Китайские Сериалы и Фильмы',});
+  page.appendItem(PREFIX + ':browse:/dorama:Дорамы', 'directory', {title: 'Дорамы',});
+  page.appendItem(PREFIX + ':browse:/shonen:Многосерийный сёнэн', 'directory', {title: 'Многосерийный сёнэн',});
+  page.appendItem(PREFIX + ':browse:/xxx:18+', 'directory', {title: '18+',});
+  page.appendItem(PREFIX + ':browse:/full:Законченные сериалы', 'directory', {title: 'Законченные сериалы',});
+  page.appendItem(PREFIX + ':browse:/unclosed:Незаконченные сериалы', 'directory', {title: 'Незаконченные сериалы',});
+  page.appendItem(PREFIX + ':browse:/animation:Мультфильмы', 'directory', {title: 'Мультфильмы',});
+  page.appendItem(PREFIX + ':browse:/adubbing:Дубляж Анидаба', 'directory', {title: 'Дубляж Анидаба',});
 });
 
 function parser(a, c, e) {
@@ -390,4 +513,26 @@ function parser(a, c, e) {
   var b = a.indexOf(c);
   0 < b && ((a = a.substr(b + c.length)), (b = a.indexOf(e)), 0 < b && (d = a.substr(0, b)));
   return d;
+}
+
+function safeJsonStringify(obj, depth, maxDepth) {
+  depth = depth || 0;
+  maxDepth = maxDepth || 10;
+
+  if (depth > maxDepth) {
+      console.warn('Превышена максимальная глубина вложенности. Возможно, есть циклические ссылки.');
+      return '"Превышена максимальная глубина"';
+  }
+
+  try {
+      return JSON.stringify(obj, function(key, value) {
+          if (typeof value === 'object' && value !== null) {
+              return safeJsonStringify(value, depth + 1, maxDepth);
+          }
+          return value;
+      });
+  } catch (error) {
+      console.error('Ошибка сериализации JSON:', error.message);
+      return '"Ошибка сериализации JSON"';
+  }
 }

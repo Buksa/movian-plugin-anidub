@@ -1,9 +1,10 @@
+var referer = service.domain;
 exports.call = function(page, URL, args, callback) {
   var opts = {
     method: 'GET',
     headers: {
      'User-Agent': UA,
-     'Referer': URL.match('moonwalk')? referer = 'http://hdrezka.me': referer,
+     'Referer': referer||URL,
     },
     args: [args || {}],
     debug: service.debug,
